@@ -1,0 +1,114 @@
+// Purple House Sport Day Check-in — Prisma 7 WASM client + MariaDB adapter.
+// Date and DateTime values used for event slots carry Bangkok wall-clock digits;
+// see src/lib/time.ts before reading or writing them.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Student {
+  id              Int             @id @default(autoincrement())
+  studentCode     String          @unique @map("student_code") @db.VarChar(30)
+  prefix          String?         @db.VarChar(30)
+  firstName       String          @map("first_name") @db.VarChar(100)
+  lastName        String          @map("last_name") @db.VarChar(100)
+  classLevel      String          @map("class_level") @db.VarChar(30)
+  room            String          @db.VarChar(20)
+  number          Int?
+  house           String          @default("purple") @db.VarChar(30)
+  lineUserId      String?         @unique @map("line_user_id") @db.VarChar(64)
+  lineDisplayName String?         @map("line_display_name") @db.VarChar(150)
+  linkedAt        DateTime?       @map("linked_at") @db.DateTime(0)
+  createdAt       DateTime        @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.DateTime(0)
+  checkinRecords  CheckinRecord[]
+
+  @@index([house])
+  @@map("students")
+}
+
+model Staff {
+  id             Int             @id @default(autoincrement())
+  username       String          @unique @db.VarChar(100)
+  passwordHash   String          @map("password_hash") @db.VarChar(255)
+  displayName    String          @map("display_name") @db.VarChar(150)
+  role           String          @default("staff") @db.VarChar(20) // admin | staff
+  createdAt      DateTime        @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.DateTime(0)
+  checkinRecords CheckinRecord[]
+
+  @@map("staff")
+}
+
+model EventDay {
+  id    Int           @id @default(autoincrement())
+  date  DateTime      @unique @db.Date
+  slots CheckinSlot[]
+
+  @@map("event_days")
+}
+
+model CheckinSlot {
+  id         Int             @id @default(autoincrement())
+  eventDayId Int             @map("event_day_id")
+  eventDay   EventDay        @relation(fields: [eventDayId], references: [id], onDelete: Cascade)
+  period     String          @db.VarChar(20) // morning | afternoon
+  opensAt    DateTime        @map("opens_at") @db.DateTime(0)
+  closesAt   DateTime        @map("closes_at") @db.DateTime(0)
+  records    CheckinRecord[]
+
+  @@unique([eventDayId, period])
+  @@map("checkin_slots")
+}
+
+model CheckinRecord {
+  id                Int         @id @default(autoincrement())
+  studentId         Int         @map("student_id")
+  student           Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  slotId            Int         @map("slot_id")
+  slot              CheckinSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  role              String      @db.VarChar(20) // compete | cheer
+  sport             String?     @db.VarChar(100)
+  lat               Float       @db.Double
+  lng               Float       @db.Double
+  accuracy          Float       @db.Double
+  samples           Json?
+  ipAddress         String?     @map("ip_address") @db.VarChar(45)
+  isSuspicious      Boolean     @default(false) @map("is_suspicious")
+  suspicionReasons  String?     @map("suspicion_reasons") @db.Text
+  source            String      @default("self") @db.VarChar(20) // self | staff
+  staffId           Int?        @map("staff_id")
+  staff             Staff?      @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  note              String?     @db.Text
+  checkedInAt       DateTime    @default(now()) @map("checked_in_at") @db.DateTime(0)
+
+  @@unique([studentId, slotId])
+  @@index([slotId])
+  @@index([staffId])
+  @@map("checkin_records")
+}
+
+model SystemSetting {
+  key   String @id @db.VarChar(50)
+  value String @db.VarChar(255)
+
+  @@map("system_settings")
+}
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  actor      String   @db.VarChar(150)
+  action     String   @db.VarChar(100)
+  targetType String   @map("target_type") @db.VarChar(100)
+  targetId   String   @map("target_id") @db.VarChar(100)
+  detail     Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}

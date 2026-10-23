@@ -1,0 +1,25 @@
+# dependencies
+/node_modules
+
+# Next.js output
+/.next/
+/out/
+/build/
+
+# environment files: never commit credentials, except the documented placeholders
+.env*
+!.env.example
+
+# generated output
+/src/generated/
+*.tsbuildinfo
+next-env.d.ts
+
+# local and sensitive artifacts
+.DS_Store
+*.pem
+*.sql
+*.dump
+*.sql.gz
+/scratch/
+/data/roster/

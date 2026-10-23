@@ -1,0 +1,1 @@
+- 08:18 Tokai Teio (Codex): Scaffolded M1 Next.js/Prisma Sport Day Check-in project; added schema, reusable shared libraries, event seed/import stub, placeholder routes, and verified build/typecheck without a database connection.
