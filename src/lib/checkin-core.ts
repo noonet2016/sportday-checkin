@@ -4,6 +4,7 @@ import { haversineDistance } from "@/lib/geo";
 import { scoreSuspicion, type CheckinGpsSample } from "@/lib/spoof";
 import { writeAudit } from "@/lib/audit";
 import type { RoomKey } from "@/lib/staff-access";
+import type { Prisma } from "@/generated/prisma/client";
 
 // Server-only domain operations shared by the authenticated actions and the local DB smoke test.
 const SPORT_REQUIRED = false;
@@ -56,6 +57,44 @@ export async function staffRecordCheckin(input: { staffId: number; studentId: nu
     });
     return { ok: true, message: "บันทึกการเช็คชื่อแทนเรียบร้อย" };
   } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "บันทึกการเช็คชื่อแทนไม่สำเร็จ" }; }
+}
+
+export const EDIT_NOT_ALLOWED_MESSAGE = "แก้ไขได้เฉพาะรายการที่ครูบันทึกแทนในห้องที่ดูแล";
+
+/** Load a record the actor may change: in scope, and (unless admin) one that staff recorded on the student's behalf. */
+async function editableRecord(tx: Prisma.TransactionClient, input: { recordId: number; isAdmin: boolean; allowedRooms: RoomKey[] }) {
+  const record = await tx.checkinRecord.findUnique({ where: { id: input.recordId }, include: { student: { select: { classLevel: true, room: true, house: true } } } });
+  if (!record || record.student.house !== "purple") throw new Error("ไม่พบรายการเช็คชื่อ");
+  const inScope = input.isAdmin || input.allowedRooms.some(r => r.classLevel === record.student.classLevel && r.room === record.student.room);
+  if (!inScope || (!input.isAdmin && record.source !== "staff")) throw new Error(EDIT_NOT_ALLOWED_MESSAGE);
+  return record;
+}
+
+export async function updateStaffRecord(input: { staffId: number; isAdmin: boolean; allowedRooms: RoomKey[]; recordId: number; role: string; sport?: string; reason: string }): Promise<Result> {
+  const reason = input.reason.trim();
+  if (!Number.isSafeInteger(input.recordId) || !["compete", "cheer"].includes(input.role) || reason.length < 3 || reason.length > 500) return { ok: false, message: "กรุณาเลือกบทบาทและระบุเหตุผล (3–500 ตัวอักษร)" };
+  try {
+    await prisma.$transaction(async tx => {
+      const before = await editableRecord(tx, input);
+      const sport = input.role === "compete" && input.sport?.trim() ? input.sport.trim().slice(0, 100) : null;
+      await tx.checkinRecord.update({ where: { id: before.id }, data: { role: input.role, sport, note: reason } });
+      await writeAudit(tx, `${input.isAdmin ? "admin" : "staff"}:${input.staffId}`, "checkin_updated", "CheckinRecord", String(before.id), { before: { role: before.role, sport: before.sport, note: before.note }, after: { role: input.role, sport, note: reason } });
+    });
+    return { ok: true, message: "แก้ไขรายการเรียบร้อย" };
+  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "แก้ไขรายการไม่สำเร็จ" }; }
+}
+
+/** Undo an on-behalf record (staff in scope or admin). Deleting a student's own check-in stays admin-only via deleteCheckinRecord. */
+export async function cancelStaffRecord(input: { staffId: number; isAdmin: boolean; allowedRooms: RoomKey[]; recordId: number }): Promise<Result> {
+  try {
+    await prisma.$transaction(async tx => {
+      const record = await editableRecord(tx, input);
+      if (record.source !== "staff") throw new Error(EDIT_NOT_ALLOWED_MESSAGE);
+      await writeAudit(tx, `${input.isAdmin ? "admin" : "staff"}:${input.staffId}`, "staff_checkin_cancelled", "CheckinRecord", String(record.id), { studentId: record.studentId, slotId: record.slotId, role: record.role, note: record.note });
+      await tx.checkinRecord.delete({ where: { id: record.id } });
+    });
+    return { ok: true, message: "ยกเลิกการบันทึกแทนเรียบร้อย" };
+  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "ยกเลิกไม่สำเร็จ" }; }
 }
 
 export async function clearCheckinFlag(input: { staffId: number; role: string; recordId: number }): Promise<void> {

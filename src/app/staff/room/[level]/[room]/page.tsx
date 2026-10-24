@@ -1,6 +1,7 @@
 import { periodLabel, roleLabel } from "@/lib/event";
 import Link from "next/link";
 import StaffNav from "../../../StaffNav";
+import RecordEditor from "../../../RecordEditor";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -101,6 +102,8 @@ export default async function Room({
                     ⚠️ <b>เหตุผลธง:</b> {r.suspicionReasons}
                   </div>
                 )}
+
+                {r && <RecordEditor record={r} isAdmin={session.role === "admin"} />}
 
                 {r && (r.lat !== 0 || r.lng !== 0) && (
                   <div>
@@ -215,6 +218,7 @@ export default async function Room({
                           <button className="secondary">บันทึก</button>
                         </form>
                       ))}
+                      {r && <RecordEditor record={r} isAdmin={session.role === "admin"} />}
                       {r?.isSuspicious && session.role === "admin" && (
                         <form action={clearFlag} className="mb-1">
                           <input type="hidden" name="recordId" value={r.id} />

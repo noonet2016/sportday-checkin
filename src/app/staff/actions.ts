@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createSession, destroySession, requireStaff } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
-import { clearCheckinFlag, deleteCheckinRecord, staffRecordCheckin } from "@/lib/checkin-core";
+import { cancelStaffRecord, clearCheckinFlag, deleteCheckinRecord, staffRecordCheckin, updateStaffRecord } from "@/lib/checkin-core";
 import { nowInBangkok } from "@/lib/time";
 import { allowedRooms } from "@/lib/staff-access";
 
@@ -27,6 +27,21 @@ export async function manualRecord(form: FormData) {
   if (!Number.isSafeInteger(studentId) || !Number.isSafeInteger(slotId) || !["compete", "cheer"].includes(role) || reason.length < 3 || reason.length > 500) throw new Error("ข้อมูลการเช็คชื่อแทนไม่ถูกต้อง");
   const rooms = await allowedRooms(actor);
   const result = await staffRecordCheckin({ staffId: Number(actor.id), studentId, slotId, role, sport, reason, now: nowInBangkok().wallClock, allowedRooms: rooms, isAdmin: actor.role === "admin" });
+  if (!result.ok) throw new Error(result.message);
+  revalidatePath("/staff"); revalidatePath("/staff/report");
+}
+
+export async function editRecord(form: FormData) {
+  const actor = await requireStaff();
+  const recordId = Number(form.get("recordId")); const role = String(form.get("role")); const reason = String(form.get("reason") ?? ""); const sport = String(form.get("sport") ?? "");
+  const result = await updateStaffRecord({ staffId: Number(actor.id), isAdmin: actor.role === "admin", allowedRooms: await allowedRooms(actor), recordId, role, sport, reason });
+  if (!result.ok) throw new Error(result.message);
+  revalidatePath("/staff"); revalidatePath("/staff/report");
+}
+
+export async function cancelRecord(form: FormData) {
+  const actor = await requireStaff();
+  const result = await cancelStaffRecord({ staffId: Number(actor.id), isAdmin: actor.role === "admin", allowedRooms: await allowedRooms(actor), recordId: Number(form.get("recordId")) });
   if (!result.ok) throw new Error(result.message);
   revalidatePath("/staff"); revalidatePath("/staff/report");
 }
