@@ -11,8 +11,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="th">
-      <body className={thai.className}>{children}</body>
+    // LINE's in-app browser (and some extensions) add attributes to <html>/<body> before React hydrates;
+    // suppress that one-level attribute mismatch only — children are still checked.
+    <html lang="th" suppressHydrationWarning>
+      <body className={thai.className} suppressHydrationWarning>{children}</body>
     </html>
   );
 }
