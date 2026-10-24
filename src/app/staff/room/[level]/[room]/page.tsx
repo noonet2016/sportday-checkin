@@ -78,30 +78,16 @@ export default async function Room({
   return (
     <main className="screen" style={{ maxWidth: "76rem", alignContent: "start" }}>
       <StaffNav active="home" />
+      <section className="sticky top-0 z-30 -mx-4 border-y border-violet-200 bg-white/95 px-4 py-3 shadow-md backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
+        <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-sm text-slate-900">{date ? `${formatThaiDate(date)} · ${period === "afternoon" ? "บ่าย" : "เช้า"}${slot ? ` ${formatWallClockTime(slot.opensAt)}–${formatWallClockTime(slot.closesAt)}` : ""}` : "เลือกวันและรอบ"}</strong><span className="text-xs font-semibold text-slate-600">อัปเดต {formatWallClockTime(nowWall)}</span></div>
+        <form className="mt-2 flex flex-wrap items-center gap-2"><label className="sr-only" htmlFor="room-day">วันที่</label><input id="room-day" name="day" type="date" defaultValue={date ? formatDateInput(date) : ""} className="min-h-10 rounded-lg border border-slate-300 px-2 text-sm"/><input type="hidden" name="period" value={period === "afternoon" ? "afternoon" : "morning"}/><button className="min-h-10 rounded-lg bg-violet-700 px-4 text-sm font-bold text-white hover:bg-violet-800">เลือกวัน</button><div className="ml-auto flex rounded-lg border border-violet-300 p-1" aria-label="เลือกช่วงเวลา">{(["morning", "afternoon"] as const).map(p => <Link key={p} href={`${roomBase}?day=${date ? formatDateInput(date) : ""}&period=${p}`} aria-current={(period === "afternoon" ? p === "afternoon" : p === "morning") ? "page" : undefined} className={`rounded-md px-3 py-2 text-sm font-bold no-underline ${(period === "afternoon" ? p === "afternoon" : p === "morning") ? "bg-violet-700 text-white" : "text-violet-900 hover:bg-violet-50"}`}>{p === "morning" ? "เช้า" : "บ่าย"}</Link>)}</div></form>
+      </section>
       <section className="card">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1>{level}/{room} · {students.length} คน</h1>
           <Link href={`/staff${day ? `?day=${encodeURIComponent(day)}&period=${period === "afternoon" ? "afternoon" : "morning"}` : ""}`}>
             ← กลับ
           </Link>
-        </div>
-        <div className="grid gap-1.5">
-          <p className="text-sm font-semibold text-slate-800">เลือกวันและรอบ <span className="font-normal text-slate-500">(🔒 = ยังไม่ถึงเวลา)</span></p>
-          {slotDays.map(([dateKey, daySlots]) => (
-            <div key={dateKey} className="flex flex-wrap items-center gap-2">
-              <span className="w-24 text-sm text-slate-700">{formatThaiDate(daySlots[0].eventDay.date)}</span>
-              {daySlots.map(x => {
-                const active = slot?.id === x.id;
-                const started = slotStarted(x);
-                return (
-                  <Link key={x.id} href={`${roomBase}?day=${dateKey}&period=${x.period}`}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold no-underline ${active ? "bg-violet-700 text-white" : started ? "border border-violet-300 bg-white text-violet-800" : "border border-slate-200 bg-slate-50 text-slate-500"}`}>
-                    {started ? "" : "🔒 "}{periodLabel(x.period)}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
         </div>
         {slot && !viewedStarted && <p className="notice">รอบนี้ยังไม่ถึงเวลา — ดูรายชื่อได้ แต่บันทึกแทนได้หลังเปิดรอบแล้วเท่านั้น</p>}
         {slot && viewedIsPast && <p className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900">🕘 รอบนี้ผ่านไปแล้ว — บันทึกแทนที่นี่จะเป็นการ<b>บันทึกย้อนหลัง</b></p>}
