@@ -48,8 +48,8 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
     setPasteMessage(isThailandPoint(point) ? "" : "ตำแหน่งอยู่นอกกรอบประเทศไทย โปรดตรวจสอบอีกครั้ง");
   }
 
-  async function searchPlaces(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  // Not a <form>: this picker renders inside the settings <form>, and nested forms make Enter submit the outer one.
+  async function searchPlaces() {
     if (!search.trim() || searching) return;
     setSearching(true); setSearchMessage(""); setResults([]);
     try {
@@ -62,7 +62,7 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
     finally { setSearching(false); }
   }
 
-  async function usePastedLocation() {
+  async function applyPastedLocation() {
     let point = parseMapLocation(paste);
     if (!point) {
       try {
@@ -91,19 +91,19 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
 
   return (
     <div className="space-y-3">
-      <form onSubmit={searchPlaces} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+      <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
         <label className="block text-sm font-semibold text-slate-800">ค้นหาสถานที่
-          <input value={search} onChange={(event) => setSearch(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900" placeholder="ชื่อสถานที่ในประเทศไทย" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900" placeholder="ชื่อสถานที่ในประเทศไทย" onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void searchPlaces(); } }} />
         </label>
-        <button disabled={searching} className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:bg-emerald-400">{searching ? "กำลังค้นหา…" : "ค้นหา"}</button>
+        <button type="button" onClick={() => void searchPlaces()} disabled={searching} className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:bg-emerald-400">{searching ? "กำลังค้นหา…" : "ค้นหา"}</button>
         {searchMessage && <p role="status" className="break-words text-sm text-slate-700">{searchMessage}</p>}
         {results.length > 0 && <ul className="max-h-64 space-y-2 overflow-y-auto">{results.map((result, index) => <li key={`${result.lat}:${result.lon}:${index}`}><button type="button" onClick={() => { applyPoint({ lat: Number(result.lat), lng: Number(result.lon) }); setSearchMessage(""); }} className="w-full whitespace-normal break-words rounded-lg border border-slate-200 p-3 text-left text-sm text-slate-800 hover:bg-emerald-50">{result.display_name}</button></li>)}</ul>}
-      </form>
+      </div>
       <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
         <label className="block text-sm font-semibold text-slate-800">วางพิกัดหรือลิงก์จาก Google Maps
-          <input value={paste} onChange={(event) => setPaste(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900" />
+          <input value={paste} onChange={(event) => setPaste(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void applyPastedLocation(); } }} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900" />
         </label>
-        <button type="button" onClick={usePastedLocation} className="w-full rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white hover:bg-violet-800">ใช้ตำแหน่งนี้</button>
+        <button type="button" onClick={applyPastedLocation} className="w-full rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white hover:bg-violet-800">ใช้ตำแหน่งนี้</button>
         {pasteMessage && <p role="status" className="break-words text-sm text-amber-800">{pasteMessage}</p>}
       </div>
       <div className="relative isolate z-0 h-[60vh] min-h-[420px] max-h-[720px] overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-950 shadow-inner">
