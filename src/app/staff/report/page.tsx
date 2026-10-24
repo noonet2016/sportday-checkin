@@ -97,15 +97,15 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                 const passed = attendancePassed(done, allSlots.length);
                 return (
                   <tr key={s.id}>
-                    <td>{s.number ?? "—"}</td>
+                    <td className="text-center tabular-nums">{s.number ?? "—"}</td>
                     <td className="whitespace-nowrap">{s.studentCode} {s.prefix ?? ""}{s.firstName} {s.lastName}</td>
-                    <td>{s.classLevel}/{s.room} {s.program}</td>
+                    <td className="whitespace-nowrap text-center">{s.classLevel}/{s.room} {s.program}</td>
                     {days.flatMap(d => d.slots.map(slot => {
                       const r = map.get(`${s.id}:${slot.id}`);
                       return <td key={slot.id} className="text-center" title={r ? roleLabel(r.role) : "ยังไม่เช็ก"}><span aria-label={r ? roleLabel(r.role) : "ยังไม่เช็ก"} className={`inline-block h-3 w-3 rounded-sm ${r ? "bg-emerald-500" : "bg-slate-200"}`} /></td>;
                     }))}
-                    <td>{done}/{allSlots.length}</td>
-                    <td className={`whitespace-nowrap font-bold ${passed ? "text-emerald-700" : "text-red-700"}`}>{attendancePercent(done, allSlots.length)}%</td>
+                    <td className="text-center tabular-nums">{done}/{allSlots.length}</td>
+                    <td className={`whitespace-nowrap text-center tabular-nums font-bold ${passed ? "text-emerald-700" : "text-red-700"}`}>{attendancePercent(done, allSlots.length)}%</td>
                     <td><span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-bold ${passed ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>{passed ? "ผ่าน" : "ไม่ผ่าน"}</span></td>
                   </tr>
                 );
