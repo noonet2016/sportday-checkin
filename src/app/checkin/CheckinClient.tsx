@@ -39,7 +39,7 @@ export default function CheckinClient({ state, slotLabel, remainingMs, existing,
     <Clock aria-hidden="true" size={48} className="text-slate-400" />
     <h1 className="text-xl font-bold text-slate-900">{state === "not-event-day" ? "วันนี้ไม่มีกิจกรรมกีฬาสี" : state === "before" ? "ยังไม่ถึงเวลาเช็คชื่อ" : "หมดเวลาเช็คชื่อแล้ว"}</h1>
     <p className="text-sm text-slate-600">เช็คชื่อได้วันละ 2 รอบ ระหว่างวันที่ 26–30 ตุลาคม 2569</p>
-    <div className="flex flex-wrap justify-center gap-2 text-sm font-semibold"><span className="rounded-full bg-violet-100 px-3 py-1 text-violet-800">รอบเช้า 08:00–10:00</span><span className="rounded-full bg-violet-100 px-3 py-1 text-violet-800">รอบบ่าย 13:00–14:00</span></div>
+    <div className="flex flex-wrap justify-center gap-2 text-sm font-semibold"><span className="rounded-full bg-violet-100 px-3 py-1 text-violet-800">รอบเช้า 08:00–10:00</span><span className="rounded-full bg-violet-100 px-3 py-1 text-violet-800">รอบบ่าย 13:00–15:00</span></div>
   </section>;
   const ok = result !== null && checkedIn;
   return <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

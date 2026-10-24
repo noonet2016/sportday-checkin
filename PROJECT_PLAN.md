@@ -8,7 +8,7 @@ LINE LIFF check-in app for the school sports week (กีฬาสี): **purple
 
 ## Success criteria
 - [ ] Student opens LIFF link → identified by LINE userId → bound to a purple-house student record (one-time bind by student ID if new).
-- [ ] Check-in allowed only inside the slot windows: **morning 08:00–10:00, afternoon 13:00–14:00** (Asia/Bangkok wall-clock), 5 days = 10 slots.
+- [ ] Check-in allowed only inside the slot windows: **morning 08:00–10:00, afternoon 13:00–15:00** (Asia/Bangkok wall-clock; afternoon widened from 14:00 on 2026-10-25), 5 days = 10 slots.
 - [ ] Student picks role: **compete** or **cheer**. One record per student per slot (unique).
 - [ ] GPS must be inside the school geofence; multi-sample GPS + silent spoof flag, reused from lineup.
 - [ ] Staff dashboard: per-slot checked / not checked / flagged, compete vs cheer counts; staff can record on a student's behalf with a reason (audit-logged).
@@ -42,6 +42,7 @@ LINE LIFF check-in app for the school sports week (กีฬาสี): **purple
 - 2026-10-24: clear-flag and delete are admin-only; staff on-behalf after a student self-checked = rejected (Tomi).
 - 2026-10-23: Event dates confirmed **26–30 Oct 2569** (Trainer first said พ.ย. — corrected).
 - 2026-10-23: Slot windows **08:00–10:00** and **13:00–14:00** (Trainer).
+- 2026-10-25: Afternoon window changed to **13:00–15:00** (Trainer). Source: `lib/event.ts` schedule + `prisma/seed.ts` (seed now updates existing afternoon slots).
 - 2026-10-23: New standalone project (not a feature inside lineup-nextjs); lineup-nextjs is the pattern source, never edited.
 - 2026-10-23: Defaults until Q2–Q6 answered: roster table with `house` column (seed purple only), optional nullable `sport` field, staff = username/password like lineup teachers.
 - 2026-10-23: Student data → subscription teammates only (never Meetang/AiPASS). Builder = Tokai Teio.

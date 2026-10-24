@@ -10,7 +10,8 @@ test("resolves slot boundaries using Bangkok wall-clock dates", () => {
   assert.equal(resolveSlotWindow(at("2026-10-26T08:00:00Z"), EVENT_DATES).state, "open");
   assert.equal(resolveSlotWindow(at("2026-10-26T10:00:00Z"), EVENT_DATES).state, "closed");
   assert.equal(resolveSlotWindow(at("2026-10-26T13:00:00Z"), EVENT_DATES).state, "open");
-  assert.equal(resolveSlotWindow(at("2026-10-26T14:00:00Z"), EVENT_DATES).state, "closed");
+  assert.equal(resolveSlotWindow(at("2026-10-26T14:30:00Z"), EVENT_DATES).state, "open");
+  assert.equal(resolveSlotWindow(at("2026-10-26T15:00:00Z"), EVENT_DATES).state, "closed");
   assert.equal(resolveSlotWindow(at("2026-10-26T07:59:59Z"), EVENT_DATES).state, "before");
   assert.equal(resolveSlotWindow(at("2026-10-31T09:00:00Z"), EVENT_DATES).state, "not-event-day");
 });

@@ -27,8 +27,9 @@ async function main() {
     });
     await prisma.checkinSlot.upsert({
       where: { eventDayId_period: { eventDayId: eventDay.id, period: "afternoon" } },
-      update: {},
-      create: { eventDayId: eventDay.id, period: "afternoon", opensAt: wallClock(date, "13:00"), closesAt: wallClock(date, "14:00") },
+      // Afternoon window 13:00–15:00 (Trainer, 2026-10-25); update keeps an already-seeded DB in step.
+      update: { opensAt: wallClock(date, "13:00"), closesAt: wallClock(date, "15:00") },
+      create: { eventDayId: eventDay.id, period: "afternoon", opensAt: wallClock(date, "13:00"), closesAt: wallClock(date, "15:00") },
     });
   }
 }

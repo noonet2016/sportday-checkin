@@ -20,7 +20,7 @@ export const attendancePassed = (attended: number, totalSlots: number): boolean 
 export const periodOrder = (period: string): number => period === "morning" ? 0 : 1;
 export type SlotState = { state: "not-event-day" } | { state: "before" | "open" | "closed"; period: EventPeriod; opensAt: Date; closesAt: Date };
 
-const schedule: Record<EventPeriod, readonly [number, number]> = { morning: [8, 10], afternoon: [13, 14] };
+const schedule: Record<EventPeriod, readonly [number, number]> = { morning: [8, 10], afternoon: [13, 15] };
 export function eventDateKey(wallClock: Date): string { return wallClock.toISOString().slice(0, 10); }
 export function resolveSlotWindow(wallClock: Date, eventDates: readonly string[] = EVENT_DATES): SlotState {
   const date = eventDateKey(wallClock);

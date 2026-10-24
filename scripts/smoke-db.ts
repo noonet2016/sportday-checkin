@@ -79,8 +79,8 @@ async function main() {
     const before = await performCheckin({ studentId: student.id, now: beforeNow, role: "cheer", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
     await check("before-window 07:59 rejects", async () => !before.ok && !before.message.includes("complete"));
     const morningClose = await performCheckin({ studentId: student.id, now: at(10, 0), role: "cheer", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
-    const afternoonClose = await performCheckin({ studentId: student.id, now: at(14, 0), role: "cheer", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
-    await check("after-window boundaries 10:00:00 and 14:00:00 reject", async () => !morningClose.ok && !afternoonClose.ok);
+    const afternoonClose = await performCheckin({ studentId: student.id, now: at(15, 0), role: "cheer", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
+    await check("after-window boundaries 10:00:00 and 15:00:00 reject", async () => !morningClose.ok && !afternoonClose.ok);
     const nonEvent = await performCheckin({ studentId: student.id, now: { dateOnly: new Date(Date.UTC(2026, 9, 31)), wallClock: new Date(Date.UTC(2026, 9, 31, 8, 30)) }, role: "cheer", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
     await check("non-event day rejects", async () => !nonEvent.ok && nonEvent.message === NOT_EVENT_DAY_MESSAGE);
     const unboundResult = await performCheckin({ studentId: unbound.id, now: at(8, 30), role: "cheer", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
