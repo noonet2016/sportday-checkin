@@ -117,6 +117,7 @@ async function main() {
       if (studentIds.length) await prisma.checkinRecord.deleteMany({ where: { studentId: { in: studentIds } } });
       if (auditActors.length) await prisma.auditLog.deleteMany({ where: { actor: { in: auditActors } } });
       if (studentIds.length) await prisma.student.deleteMany({ where: { id: { in: studentIds } } });
+      if (staffIds.length) await prisma.staffRoom.deleteMany({ where: { staffId: { in: staffIds } } });
       if (staffIds.length) await prisma.staff.deleteMany({ where: { id: { in: staffIds } } });
       if (createdSettingKeys.length) await prisma.systemSetting.deleteMany({ where: { key: { in: createdSettingKeys } } });
     } catch { console.log("FAIL temporary-row cleanup"); failed = true; }
