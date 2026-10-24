@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { ClipboardList, House, MapPin, Users } from "lucide-react";
+import { ClipboardList, House, Link2, MapPin, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { logoutStaff } from "./actions";
 
-type ActivePage = "home" | "report" | "settings" | "users";
+type ActivePage = "home" | "report" | "line" | "settings" | "users";
 export default async function StaffNav({ active }: { active: ActivePage }) {
   const session = await getSession("staff");
   if (!session) return null;
@@ -16,6 +16,7 @@ export default async function StaffNav({ active }: { active: ActivePage }) {
   const links = [
     { key: "home" as const, href: "/staff", label: "หน้าหลัก", Icon: House },
     { key: "report" as const, href: "/staff/report", label: "รายงาน", Icon: ClipboardList },
+    { key: "line" as const, href: "/staff/line", label: "ผูก LINE", Icon: Link2 },
     ...(admin ? [
       { key: "settings" as const, href: "/staff/settings", label: "พื้นที่", Icon: MapPin },
       { key: "users" as const, href: "/staff/users", label: "ครู", Icon: Users },

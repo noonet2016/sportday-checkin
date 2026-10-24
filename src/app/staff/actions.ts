@@ -102,3 +102,18 @@ export async function deleteStaff(form: FormData) {
  const actor=await requireStaff(true), id=Number(form.get("staffId"));if(!Number.isSafeInteger(id)) throw new Error("ข้อมูลบัญชีเจ้าหน้าที่ไม่ถูกต้อง");
  await prisma.$transaction(async tx=>{const target=await tx.staff.findUnique({where:{id},select:{role:true,username:true}});if(!target)throw new Error("ไม่พบบัญชีเจ้าหน้าที่");if(target.role==="admin"&&await tx.staff.count({where:{role:"admin"}})<=1)throw new Error("ไม่สามารถลบผู้ดูแลระบบคนสุดท้ายได้");await writeAudit(tx,`admin:${actor.id}`,"staff_deleted","Staff",String(id),{username:target.username});await tx.staff.delete({where:{id}});});revalidatePath("/staff/users");
 }
+
+/** Unlink a student's LINE account so they can bind again (teacher: own rooms only; admin: any). Mirrors lineup's unlink. */
+export async function unlinkStudentLine(form: FormData) {
+  const actor = await requireStaff(); const id = Number(form.get("studentId"));
+  if (!Number.isSafeInteger(id)) throw new Error("ข้อมูลนักเรียนไม่ถูกต้อง");
+  const student = await prisma.student.findUnique({ where: { id }, select: { id: true, classLevel: true, room: true, house: true, lineUserId: true, lineDisplayName: true } });
+  if (!student || student.house !== "purple") throw new Error("ไม่พบนักเรียน");
+  if (actor.role !== "admin" && !(await allowedRooms(actor)).some(r => r.classLevel === student.classLevel && r.room === student.room)) throw new Error("ไม่มีสิทธิ์จัดการห้องนี้");
+  if (!student.lineUserId) return;
+  await prisma.$transaction(async (tx) => {
+    await tx.student.update({ where: { id }, data: { lineUserId: null, lineDisplayName: null, linkedAt: null } });
+    await writeAudit(tx, `${actor.role}:${actor.id}`, "student_unbound", "Student", String(id), { lineDisplayName: student.lineDisplayName });
+  });
+  revalidatePath("/staff/line");
+}
