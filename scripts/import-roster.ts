@@ -1,8 +1,18 @@
-/**
- * M3 stub. Expected CSV columns:
- * studentCode,prefix,firstName,lastName,classLevel,room,number,house
- * The roster file has not been supplied; this script intentionally performs no import.
- */
+import fs from "node:fs";
+import path from "node:path";
 
-console.error("Roster import is not available in M1: no roster CSV has been provided.");
-process.exitCode = 1;
+type Row = { studentCode: string; prefix: string; firstName: string; lastName: string; classLevel: string; room: string; program: string; number: number | null };
+const args = process.argv.slice(2); const dryRun = args.includes("--dry-run");
+const input = args.find((arg) => arg !== "--dry-run") ?? "data/roster/purple-students.csv";
+function parseCsv(text: string): string[][] { const rows: string[][] = []; let row: string[] = []; let value = ""; let quoted = false; for (let i = 0; i < text.length; i += 1) { const c = text[i]; if (quoted && c === '"' && text[i + 1] === '"') { value += c; i += 1; } else if (c === '"') quoted = !quoted; else if (c === "," && !quoted) { row.push(value); value = ""; } else if ((c === "\n" || c === "\r") && !quoted) { if (c === "\r" && text[i + 1] === "\n") i += 1; row.push(value); if (row.some(Boolean)) rows.push(row); row = []; value = ""; } else value += c; } row.push(value); if (row.some(Boolean)) rows.push(row); return rows; }
+function required(value: string, name: string, row: number) { if (!value.trim()) throw new Error(`row ${row}: ${name} is required`); return value.trim(); }
+function numeric(value: string, name: string, row: number) { const parsed = Number(value); if (!Number.isInteger(parsed) || parsed < 1) throw new Error(`row ${row}: ${name} must be a positive integer`); return parsed; }
+const source = path.resolve(input); if (!fs.existsSync(source)) throw new Error(`Roster CSV not found: ${source}`);
+const rows = parseCsv(fs.readFileSync(source, "utf8")); const headers = rows.shift()?.map((header) => header.trim()) ?? [];
+const expected = ["studentCode", "prefix", "firstName", "lastName", "classLevel", "room", "program", "number"];
+if (expected.some((name) => !headers.includes(name))) throw new Error(`CSV must include: ${expected.join(",")}`);
+const index = (name: string) => headers.indexOf(name); const codes = new Set<string>();
+const roster: Row[] = rows.map((cells, i) => { const line = i + 2; const studentCode = required(cells[index("studentCode")] ?? "", "studentCode", line); if (codes.has(studentCode)) throw new Error(`row ${line}: duplicate studentCode`); codes.add(studentCode); const level = numeric(cells[index("classLevel")] ?? "", "classLevel", line); const room = numeric(cells[index("room")] ?? "", "room", line); const numberValue = (cells[index("number")] ?? "").trim(); return { studentCode, prefix: (cells[index("prefix")] ?? "").trim(), firstName: required(cells[index("firstName")] ?? "", "firstName", line), lastName: required(cells[index("lastName")] ?? "", "lastName", line), classLevel: String(level), room: String(room), program: (cells[index("program")] ?? "").trim(), number: numberValue ? numeric(numberValue, "number", line) : null }; });
+console.log(`Validated ${roster.length} roster rows${dryRun ? " (dry run)" : ""}.`);
+async function main() { if (dryRun) return; if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for roster import; use --dry-run to validate without a database."); const { prisma } = await import("../src/lib/prisma"); for (const student of roster) await prisma.student.upsert({ where: { studentCode: student.studentCode }, create: { ...student, house: "purple", program: student.program || null }, update: { prefix: student.prefix || null, firstName: student.firstName, lastName: student.lastName, classLevel: student.classLevel, room: student.room, program: student.program || null, number: student.number, house: "purple" } }); await prisma.$disconnect(); console.log(`Imported ${roster.length} purple-house students.`); }
+void main();

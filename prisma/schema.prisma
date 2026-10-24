@@ -19,6 +19,7 @@ model Student {
   lastName        String          @map("last_name") @db.VarChar(100)
   classLevel      String          @map("class_level") @db.VarChar(30)
   room            String          @db.VarChar(20)
+  program         String?         @db.VarChar(20)
   number          Int?
   house           String          @default("purple") @db.VarChar(30)
   lineUserId      String?         @unique @map("line_user_id") @db.VarChar(64)

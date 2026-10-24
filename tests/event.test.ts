@@ -1,0 +1,34 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { EVENT_DATES, resolveSlotWindow } from "../src/lib/event";
+import { haversineDistance } from "../src/lib/geo";
+import { scoreSuspicion, type CheckinGpsSample } from "../src/lib/spoof";
+
+const at = (iso: string) => new Date(iso);
+
+test("resolves slot boundaries using Bangkok wall-clock dates", () => {
+  assert.equal(resolveSlotWindow(at("2026-10-26T08:00:00Z"), EVENT_DATES).state, "open");
+  assert.equal(resolveSlotWindow(at("2026-10-26T10:00:00Z"), EVENT_DATES).state, "closed");
+  assert.equal(resolveSlotWindow(at("2026-10-26T13:00:00Z"), EVENT_DATES).state, "open");
+  assert.equal(resolveSlotWindow(at("2026-10-26T14:00:00Z"), EVENT_DATES).state, "closed");
+  assert.equal(resolveSlotWindow(at("2026-10-26T07:59:59Z"), EVENT_DATES).state, "before");
+  assert.equal(resolveSlotWindow(at("2026-10-31T09:00:00Z"), EVENT_DATES).state, "not-event-day");
+});
+
+test("geofence distinguishes inside from outside", () => {
+  const center = { lat: 13.7563, lng: 100.5018 };
+  assert.ok(haversineDistance(center.lat, center.lng, center.lat, center.lng) <= 100);
+  assert.ok(haversineDistance(center.lat, center.lng, 13.7663, 100.5018) > 100);
+});
+
+const sample = (lat: number, lng: number, accuracy = 20): CheckinGpsSample => ({
+  lat, lng, accuracy, altitude: 10, altitudeAccuracy: 5, speed: 0, heading: 0, timestamp: Date.now(),
+});
+
+test("scores exact centroid and static GPS samples as suspicious", () => {
+  const center = { name: "School", lat: 13.7563, lng: 100.5018 };
+  const staticSamples = [sample(center.lat, center.lng), sample(center.lat, center.lng), sample(center.lat, center.lng)];
+  assert.equal(scoreSuspicion(staticSamples, center.lat, center.lng, center).suspicious, true);
+  const naturalSamples = [sample(13.7563, 100.5018), sample(13.75631, 100.50181), sample(13.75632, 100.50182)];
+  assert.equal(scoreSuspicion(naturalSamples, 13.75633, 100.50183, center).suspicious, false);
+});

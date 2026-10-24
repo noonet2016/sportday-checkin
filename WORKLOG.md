@@ -1,1 +1,3 @@
 - 08:18 Tokai Teio (Codex): Scaffolded M1 Next.js/Prisma Sport Day Check-in project; added schema, reusable shared libraries, event seed/import stub, placeholder routes, and verified build/typecheck without a database connection.
+- 09:06 Symboli Rudolf (Claude): Roster combined → data/roster/purple-students.csv (503 students, 14 rooms; Excel = truth). Paused by Trainer — checkpoint in team worklog/2026-10-23.md. Next: Q4/Q5/Q6 answers → M2 (student flow) to Teio.
+- 07:22 Tokai Teio (Codex): Built M2 student LIFF bind/check-in/history flow, roster import validation/upsert, server-side geofence/audit handling, and unit tests; build/typecheck/lint/tests pass without a local database.

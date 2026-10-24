@@ -1,3 +1,8 @@
-export default function CheckinPage() {
-  return <main className="mx-auto max-w-xl p-8">Student check-in is coming in M2.</main>;
-}
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
+import { nowInBangkok, formatWallClockTime } from "@/lib/time";
+import { resolveSlotWindow } from "@/lib/event";
+import CheckinClient from "./CheckinClient";
+export const dynamic = "force-dynamic";
+export default async function CheckinPage() { const session = await getSession(); if (!session || session.role !== "student") redirect("/liff"); const student = await prisma.student.findUnique({ where: { studentCode: session.id }, select: { id: true } }); if (!student) redirect("/liff"); const now = nowInBangkok(); const window = resolveSlotWindow(now.wallClock); let existing: { role: string; checkedInAt: string } | undefined; if (window.state !== "not-event-day") { const day = await prisma.eventDay.findUnique({ where: { date: now.dateOnly }, select: { id: true } }); const slot = day ? await prisma.checkinSlot.findUnique({ where: { eventDayId_period: { eventDayId: day.id, period: window.period } }, select: { id: true } }) : null; const record = slot ? await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: student.id, slotId: slot.id } }, select: { role: true, checkedInAt: true } }) : null; if (record) existing = { role: record.role, checkedInAt: formatWallClockTime(record.checkedInAt, true) }; } return <main className="screen"><CheckinClient state={window.state} closesAt={window.state === "not-event-day" ? undefined : window.closesAt.toISOString()} existing={existing} /><a className="link-button" href="/me">My check-in history</a></main>; }
