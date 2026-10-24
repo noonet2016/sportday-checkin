@@ -4,6 +4,7 @@ import StaffNav from "../../../StaffNav";
 import SlotBar from "../../../ui/SlotBar";
 import RecordEditor from "../../../RecordEditor";
 import SheetTrigger from "../../../ui/SheetTrigger";
+import { PencilLine } from "lucide-react";
 import RoomFilters from "../../RoomFilters";
 import RoleSportFields from "../../../RoleSportFields";
 import ChoiceWithOther from "@/app/_components/ChoiceWithOther";
@@ -141,7 +142,7 @@ export default async function Room({
                   </div>
                 </div>
 
-                {r && <div className="text-xs font-medium tabular-nums text-slate-600">เวลา {formatWallClockTime(r.checkedInAt, true)}</div>}
+                {r && <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-medium tabular-nums text-slate-600">เวลา {formatWallClockTime(r.checkedInAt, true)}</span>{r.source === "staff" && <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 font-semibold text-sky-800"><PencilLine aria-hidden="true" size={13} />ครูบันทึกแทน{r.staff?.displayName ? ` · ${r.staff.displayName}` : ""}</span>}</div>}
 
                 {isAdmin && r?.suspicionReasons && (
                   <div className="rounded-lg bg-amber-50 p-2 text-xs text-amber-900 break-words">
