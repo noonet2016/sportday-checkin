@@ -4,7 +4,7 @@ import StaffNav from "../../../StaffNav";
 import SlotBar from "../../../ui/SlotBar";
 import RecordEditor from "../../../RecordEditor";
 import SheetTrigger from "../../../ui/SheetTrigger";
-import { PencilLine } from "lucide-react";
+import { ExternalLink, MapPin, PencilLine, TriangleAlert } from "lucide-react";
 import RoomFilters from "../../RoomFilters";
 import RoleSportFields from "../../../RoleSportFields";
 import ChoiceWithOther from "@/app/_components/ChoiceWithOther";
@@ -61,6 +61,11 @@ export default async function Room({
     if (!fence || r.source !== "self") return null;
     const d = distanceFromCentre(fence, r.lat, r.lng);
     return `${d > fence.radius ? "⚠️ นอกรัศมี" : "ในรัศมี"} ~${formatDistance(d)} (กำหนด ${formatDistance(fence.radius)})`;
+  };
+  const distanceInfo = (r: { source: string; lat: number; lng: number }) => {
+    if (!fence || r.source !== "self") return null;
+    const d = distanceFromCentre(fence, r.lat, r.lng);
+    return { inside: d <= fence.radius, text: `${d <= fence.radius ? "ในรัศมี" : "นอกรัศมี"} ~${formatDistance(d)} (กำหนด ${formatDistance(fence.radius)})` };
   };
   // Strict เลขที่ order (Trainer, 2026-10-24) — the query already orders by number.
   const missingCount = students.filter(s => !map.has(s.id)).length;
@@ -150,22 +155,19 @@ export default async function Room({
                   </div>
                 )}
 
-                {r && distanceText(r) && <div className="text-sm text-slate-700">📍 {distanceText(r)}</div>}
-
                 {r?.reviewRequested && <div><span className="inline-flex rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-800">🚩 แจ้ง admin ตรวจแล้ว</span></div>}
 
-                {r && (r.lat !== 0 || r.lng !== 0) && (
-                  <div>
-                    <a
-                      target="_blank"
-                      rel="noreferrer"
-                      href={`https://maps.google.com/?q=${r.lat},${r.lng}`}
-                      className="inline-flex items-center text-sm font-semibold text-sky-700 underline hover:text-sky-800"
-                    >
-                      📍 เปิดแผนที่
-                    </a>
+                {r && (distanceInfo(r) || r.lat !== 0 || r.lng !== 0) && (() => { const dist = distanceInfo(r); return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {dist && <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${dist.inside ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>{dist.inside ? <MapPin aria-hidden="true" size={13} /> : <TriangleAlert aria-hidden="true" size={13} />}{dist.text}</span>}
+                    {(r.lat !== 0 || r.lng !== 0) && (
+                      <a target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${r.lat},${r.lng}`}
+                        className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-sky-300 bg-white px-3 text-sm font-semibold text-sky-800 no-underline hover:bg-sky-50">
+                        <MapPin aria-hidden="true" size={16} />ดูบนแผนที่<ExternalLink aria-hidden="true" size={14} className="text-sky-600" />
+                      </a>
+                    )}
                   </div>
-                )}
+                ); })()}
 
 
                 {r?.isSuspicious && session.role === "admin" && (
