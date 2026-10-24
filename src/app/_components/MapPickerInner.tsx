@@ -5,6 +5,7 @@ import L from "leaflet";
 import { Circle, MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { MapPickerProps, MapPoint } from "./MapPicker";
+import { isThailandPoint, parseMapLocation } from "@/lib/map-location";
 
 const markerIcon = L.divIcon({
   className: "",
@@ -35,6 +36,48 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
   const position = useMemo<[number, number]>(() => [value.lat, value.lng], [value.lat, value.lng]);
   const [basemap, setBasemap] = useState<"street" | "satellite">("street");
   const [locating, setLocating] = useState(false);
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState<Array<{ lat: string; lon: string; display_name: string }>>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchMessage, setSearchMessage] = useState("");
+  const [paste, setPaste] = useState("");
+  const [pasteMessage, setPasteMessage] = useState("");
+
+  function applyPoint(point: { lat: number; lng: number }) {
+    onChange({ ...value, ...point });
+    setPasteMessage(isThailandPoint(point) ? "" : "ตำแหน่งอยู่นอกกรอบประเทศไทย โปรดตรวจสอบอีกครั้ง");
+  }
+
+  async function searchPlaces(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!search.trim() || searching) return;
+    setSearching(true); setSearchMessage(""); setResults([]);
+    try {
+      const response = await fetch(`/staff/api/geocode?q=${encodeURIComponent(search.trim())}`);
+      if (!response.ok) throw new Error("network");
+      const data = await response.json() as Array<{ lat: string; lon: string; display_name: string }>;
+      setResults(data);
+      if (!data.length) setSearchMessage("ไม่พบสถานที่ ลองใช้ชื่ออื่น หรือวางพิกัดจาก Google Maps");
+    } catch { setSearchMessage("ค้นหาไม่สำเร็จ โปรดลองอีกครั้ง"); }
+    finally { setSearching(false); }
+  }
+
+  async function usePastedLocation() {
+    let point = parseMapLocation(paste);
+    if (!point) {
+      try {
+        const url = new URL(paste.trim());
+        if (url.hostname === "maps.app.goo.gl" || url.hostname === "goo.gl") {
+          const response = await fetch(`/staff/api/maps-resolve?url=${encodeURIComponent(url.toString())}`);
+          if (!response.ok) throw new Error();
+          const data = await response.json() as { url: string };
+          point = parseMapLocation(data.url);
+        }
+      } catch { /* show the same clear parse error below */ }
+    }
+    if (!point) { setPasteMessage("ไม่พบพิกัดที่ถูกต้อง กรุณาวางพิกัดหรือลิงก์ Google Maps ที่มีตำแหน่ง"); return; }
+    applyPoint(point);
+  }
 
   function useCurrentPosition() {
     if (!navigator.geolocation || locating) return;
@@ -48,6 +91,21 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
 
   return (
     <div className="space-y-3">
+      <form onSubmit={searchPlaces} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+        <label className="block text-sm font-semibold text-slate-800">ค้นหาสถานที่
+          <input value={search} onChange={(event) => setSearch(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900" placeholder="ชื่อสถานที่ในประเทศไทย" />
+        </label>
+        <button disabled={searching} className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:bg-emerald-400">{searching ? "กำลังค้นหา…" : "ค้นหา"}</button>
+        {searchMessage && <p role="status" className="break-words text-sm text-slate-700">{searchMessage}</p>}
+        {results.length > 0 && <ul className="max-h-64 space-y-2 overflow-y-auto">{results.map((result, index) => <li key={`${result.lat}:${result.lon}:${index}`}><button type="button" onClick={() => { applyPoint({ lat: Number(result.lat), lng: Number(result.lon) }); setSearchMessage(""); }} className="w-full whitespace-normal break-words rounded-lg border border-slate-200 p-3 text-left text-sm text-slate-800 hover:bg-emerald-50">{result.display_name}</button></li>)}</ul>}
+      </form>
+      <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+        <label className="block text-sm font-semibold text-slate-800">วางพิกัดหรือลิงก์จาก Google Maps
+          <input value={paste} onChange={(event) => setPaste(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900" />
+        </label>
+        <button type="button" onClick={usePastedLocation} className="w-full rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white hover:bg-violet-800">ใช้ตำแหน่งนี้</button>
+        {pasteMessage && <p role="status" className="break-words text-sm text-amber-800">{pasteMessage}</p>}
+      </div>
       <div className="relative isolate z-0 h-[60vh] min-h-[420px] max-h-[720px] overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-950 shadow-inner">
         <MapContainer center={position} zoom={17} scrollWheelZoom className="h-full w-full">
           {basemap === "satellite" ? (
@@ -59,7 +117,7 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
           <MapEvents value={value} onChange={onChange} />
           <Marker position={position} icon={markerIcon} draggable eventHandlers={{ dragend: (event) => {
             const next = event.target.getLatLng();
-            onChange({ ...value, lat: next.lat, lng: next.lng });
+            applyPoint({ lat: next.lat, lng: next.lng });
           } }} />
           <Circle center={position} radius={value.radiusM} pathOptions={{ color: "#22d3ee", fillColor: "#06b6d4", fillOpacity: 0.15 }} />
         </MapContainer>
