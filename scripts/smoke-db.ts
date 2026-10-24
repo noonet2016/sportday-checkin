@@ -1,5 +1,5 @@
 import { prisma } from "../src/lib/prisma";
-import { performCheckin, staffRecordCheckin, clearCheckinFlag, deleteCheckinRecord, updateStaffRecord, cancelStaffRecord, SPORT_REQUIRED_MESSAGE, CHECKIN_ALREADY_DONE_MESSAGE, NOT_EVENT_DAY_MESSAGE, STAFF_STUDENT_ALREADY_CHECKED_IN_MESSAGE } from "../src/lib/checkin-core";
+import { performCheckin, staffRecordCheckin, clearCheckinFlag, deleteCheckinRecord, updateStaffRecord, cancelStaffRecord, SPORT_REQUIRED_MESSAGE, SLOT_NOT_STARTED_MESSAGE, CHECKIN_ALREADY_DONE_MESSAGE, NOT_EVENT_DAY_MESSAGE, STAFF_STUDENT_ALREADY_CHECKED_IN_MESSAGE } from "../src/lib/checkin-core";
 import type { CheckinGpsSample } from "../src/lib/spoof";
 import { nowInBangkok } from "../src/lib/time";
 import { allowedRooms, roomAllowed } from "../src/lib/staff-access";
@@ -93,6 +93,10 @@ async function main() {
     const competeNoSportStaff = await staffRecordCheckin({ staffId: admin.id, isAdmin: true, allowedRooms: adminScope, studentId: staffStudent.id, slotId: morning.id, role: "compete", reason: "ไม่ได้นำโทรศัพท์มา", now: at(8, 30).wallClock });
     const competeNoSportStudent = await performCheckin({ studentId: geoStudent.id, now: at(8, 30), role: "compete", sport: "  ", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
     await check("compete without a sport is rejected (staff + student)", async () => !competeNoSportStaff.ok && competeNoSportStaff.message === SPORT_REQUIRED_MESSAGE && !competeNoSportStudent.ok && competeNoSportStudent.message === SPORT_REQUIRED_MESSAGE && !await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: staffStudent.id, slotId: morning.id } } }));
+    const futureSlot = await staffRecordCheckin({ staffId: admin.id, isAdmin: true, allowedRooms: adminScope, studentId: staffStudent.id, slotId: afternoon.id, role: "cheer", reason: "ลืมเช็คชื่อ", now: at(8, 30).wallClock });
+    await check("on-behalf for a slot that has not opened yet is rejected", async () => !futureSlot.ok && futureSlot.message === SLOT_NOT_STARTED_MESSAGE && !await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: staffStudent.id, slotId: afternoon.id } } }));
+    const backdated = await staffRecordCheckin({ staffId: admin.id, isAdmin: true, allowedRooms: adminScope, studentId: geoStudent.id, slotId: morning.id, role: "cheer", reason: "ลืมเช็คชื่อ", now: at(17, 0).wallClock });
+    await check("on-behalf back-dated to an earlier slot (evening review) is accepted", async () => backdated.ok && (await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: geoStudent.id, slotId: morning.id } }, select: { source: true } }))?.source === "staff");
     const staffResult = await staffRecordCheckin({ staffId: admin.id, isAdmin: true, allowedRooms: adminScope, studentId: staffStudent.id, slotId: morning.id, role: "cheer", reason: "late arrival", now: at(8, 30).wallClock });
     const staffRow = await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: staffStudent.id, slotId: morning.id } }, select: { id: true, source: true, staffId: true } });
     await check("staff on-behalf with reason persists source, staffId and audit", async () => staffResult.ok && staffRow?.source === "staff" && staffRow.staffId === admin.id && Boolean(await prisma.auditLog.findFirst({ where: { actor: `staff:${admin.id}`, action: "staff_checkin_created", targetId: String(staffRow.id) } })));

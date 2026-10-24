@@ -1,4 +1,4 @@
-import { periodLabel, roleLabel } from "@/lib/event";
+import { periodLabel, periodOrder, roleLabel } from "@/lib/event";
 import Link from "next/link";
 import StaffNav from "../../../StaffNav";
 import RecordEditor from "../../../RecordEditor";
@@ -10,7 +10,7 @@ import { formatDistance } from "@/lib/geo";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { parseDateInput, formatWallClockTime, formatDateInput } from "@/lib/time";
+import { parseDateInput, formatWallClockTime, formatDateInput, nowInBangkok } from "@/lib/time";
 import { manualRecord, clearFlag, deleteRecord } from "@/app/staff/actions";
 import { allowedRooms, roomAllowed } from "@/lib/staff-access";
 
@@ -60,8 +60,17 @@ export default async function Room({
   students.sort((x, y) => Number(map.has(x.id)) - Number(map.has(y.id)));
   const missingCount = students.filter(s => !map.has(s.id)).length;
   // On-behalf targets only the slot being viewed; the status shown on this page is for that slot.
+  // Slot picker: every event slot, so teachers can review in the evening and back-date; future slots are view-only.
+  const nowWall = nowInBangkok().wallClock;
+  const allSlots = (await prisma.checkinSlot.findMany({ include: { eventDay: { select: { date: true } } } }))
+    .sort((a, b) => a.eventDay.date.getTime() - b.eventDay.date.getTime() || periodOrder(a.period) - periodOrder(b.period));
+  const slotDays = [...new Map(allSlots.map(x => [formatDateInput(x.eventDay.date), allSlots.filter(y => y.eventDayId === x.eventDayId)])).entries()];
+  const slotStarted = (x: { opensAt: Date }) => x.opensAt.getTime() <= nowWall.getTime();
+  const viewedStarted = slot ? slotStarted(slot) : false;
+  const viewedIsPast = slot ? slot.closesAt.getTime() <= nowWall.getTime() : false;
+  const roomBase = `/staff/room/${encodeURIComponent(level)}/${encodeURIComponent(room)}`;
   const pick = await prisma.checkinSlot.findMany({
-    where: { id: slot?.id ?? -1 },
+    where: { id: slot && viewedStarted ? slot.id : -1 },
     select: { id: true, period: true },
   });
 
@@ -75,6 +84,26 @@ export default async function Room({
             ← กลับ
           </Link>
         </div>
+        <div className="grid gap-1.5">
+          <p className="text-sm font-semibold text-slate-800">เลือกวันและรอบ</p>
+          {slotDays.map(([dateKey, daySlots]) => (
+            <div key={dateKey} className="flex flex-wrap items-center gap-2">
+              <span className="w-24 text-sm text-slate-700">{thaiDayLabel(daySlots[0].eventDay.date)}</span>
+              {daySlots.map(x => {
+                const active = slot?.id === x.id;
+                const started = slotStarted(x);
+                return (
+                  <Link key={x.id} href={`${roomBase}?day=${dateKey}&period=${x.period}`}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold no-underline ${active ? "bg-violet-700 text-white" : started ? "border border-violet-300 bg-white text-violet-800" : "border border-slate-200 bg-slate-50 text-slate-500"}`}>
+                    {periodLabel(x.period)}{started ? "" : " (ยังไม่ถึง)"}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        {slot && !viewedStarted && <p className="notice">รอบนี้ยังไม่ถึงเวลา — ดูรายชื่อได้ แต่บันทึกแทนได้หลังเปิดรอบแล้วเท่านั้น</p>}
+        {slot && viewedIsPast && <p className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900">🕘 รอบนี้ผ่านไปแล้ว — บันทึกแทนที่นี่จะเป็นการ<b>บันทึกย้อนหลัง</b></p>}
         {slot && <p className="text-sm text-slate-700">{formatDateInput(slot.opensAt)} รอบ{periodLabel(slot.period)} · ยังไม่เช็ค <b className="text-red-700">{missingCount}</b> คน{missingCount > 0 ? " — แสดงไว้ด้านบนพร้อมฟอร์มบันทึกแทน" : ""}</p>}
 
         {/* Mobile (<640px): one card per student */}
@@ -245,4 +274,11 @@ export default async function Room({
       </section>
     </main>
   );
+}
+
+const THAI_WEEKDAYS = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
+const THAI_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+/** Event dates are stored as DATE (UTC fields = Bangkok calendar day): "จ. 26 ต.ค." */
+function thaiDayLabel(date: Date): string {
+  return `${THAI_WEEKDAYS[date.getUTCDay()]} ${date.getUTCDate()} ${THAI_MONTHS[date.getUTCMonth()]}`;
 }

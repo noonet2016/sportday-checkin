@@ -10,6 +10,7 @@ import type { Prisma } from "@/generated/prisma/client";
 // Server-only domain operations shared by the authenticated actions and the local DB smoke test.
 const SPORT_REQUIRED = true; // Trainer 2026-10-24: compete must name a sport (picker + "อื่น ๆ")
 export const SPORT_REQUIRED_MESSAGE = "กรุณาเลือกชนิดกีฬาที่แข่ง";
+export const SLOT_NOT_STARTED_MESSAGE = "รอบนี้ยังไม่ถึงเวลา บันทึกแทนล่วงหน้าไม่ได้";
 type CheckinRole = "compete" | "cheer";
 type Result = { ok: boolean; message: string; distanceM?: number; radiusM?: number };
 type CheckinNow = { dateOnly: Date; wallClock: Date };
@@ -52,8 +53,10 @@ export async function staffRecordCheckin(input: { staffId: number; studentId: nu
   try {
     await prisma.$transaction(async tx => {
       const student = await tx.student.findFirst({ where: { id: input.studentId, house: "purple", ...(input.isAdmin ? {} : { OR: (input.allowedRooms ?? []).map(({ classLevel, room }) => ({ classLevel, room })) }) }, select: { id: true } });
-      const slot = await tx.checkinSlot.findUnique({ where: { id: input.slotId }, select: { id: true } });
+      const slot = await tx.checkinSlot.findUnique({ where: { id: input.slotId }, select: { id: true, opensAt: true } });
       if (!student || !slot) throw new Error("ไม่พบข้อมูลนักเรียนหรือรอบเช็คชื่อ");
+      // Back-dating to any slot that has already opened is allowed (e.g. evening review); future slots are not.
+      if (slot.opensAt.getTime() > input.now.getTime()) throw new Error(SLOT_NOT_STARTED_MESSAGE);
       if (await tx.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: input.studentId, slotId: input.slotId } }, select: { id: true } })) throw new Error(STAFF_STUDENT_ALREADY_CHECKED_IN_MESSAGE);
       const record = await tx.checkinRecord.create({ data: { studentId: input.studentId, slotId: input.slotId, role: input.role, sport: input.role === "compete" && input.sport?.trim() ? input.sport.trim().slice(0, 100) : null, lat: 0, lng: 0, accuracy: 0, source: "staff", staffId: input.staffId, note: reason, checkedInAt: input.now } });
       await writeAudit(tx, `staff:${input.staffId}`, "staff_checkin_created", "CheckinRecord", String(record.id), { studentId: input.studentId, slotId: input.slotId, role: input.role, reason });
