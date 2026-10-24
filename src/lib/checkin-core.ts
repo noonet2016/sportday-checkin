@@ -104,6 +104,34 @@ export async function cancelStaffRecord(input: { staffId: number; isAdmin: boole
   } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "ยกเลิกไม่สำเร็จ" }; }
 }
 
+/** Teacher → admin: flag a student's own check-in for review. The admin then keeps it (resolve) or deletes it. */
+export async function requestReview(input: { staffId: number; isAdmin: boolean; allowedRooms: RoomKey[]; recordId: number; reason: string; now: Date }): Promise<Result> {
+  const reason = input.reason.trim();
+  if (!Number.isSafeInteger(input.recordId) || reason.length < 3 || reason.length > 500) return { ok: false, message: "กรุณาเลือกเหตุผลที่แจ้งตรวจ (3–500 ตัวอักษร)" };
+  try {
+    await prisma.$transaction(async tx => {
+      const record = await tx.checkinRecord.findUnique({ where: { id: input.recordId }, include: { student: { select: { classLevel: true, room: true, house: true } } } });
+      if (!record || record.student.house !== "purple") throw new Error("ไม่พบรายการเช็คชื่อ");
+      if (!input.isAdmin && !input.allowedRooms.some(r => r.classLevel === record.student.classLevel && r.room === record.student.room)) throw new Error("แจ้งตรวจได้เฉพาะห้องที่ดูแล");
+      if (record.source !== "self") throw new Error("รายการที่ครูบันทึกแทน แก้ไขหรือยกเลิกได้เองโดยไม่ต้องแจ้งตรวจ");
+      await tx.checkinRecord.update({ where: { id: record.id }, data: { reviewRequested: true, reviewReason: reason, reviewRequestedBy: input.staffId, reviewRequestedAt: input.now } });
+      await writeAudit(tx, `staff:${input.staffId}`, "checkin_review_requested", "CheckinRecord", String(record.id), { reason });
+    });
+    return { ok: true, message: "แจ้ง admin ตรวจแล้ว" };
+  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "แจ้งตรวจไม่สำเร็จ" }; }
+}
+
+/** Admin closes a review request and keeps the record as is. */
+export async function resolveReview(input: { staffId: number; role: string; recordId: number }): Promise<void> {
+  if (input.role !== "admin") throw new Error("ต้องใช้สิทธิ์ผู้ดูแลระบบ");
+  await prisma.$transaction(async tx => {
+    const record = await tx.checkinRecord.findUnique({ where: { id: input.recordId }, select: { id: true, reviewReason: true } });
+    if (!record) throw new Error("ไม่พบรายการเช็คชื่อ");
+    await tx.checkinRecord.update({ where: { id: record.id }, data: { reviewRequested: false } });
+    await writeAudit(tx, `admin:${input.staffId}`, "checkin_review_resolved", "CheckinRecord", String(record.id), { kept: true, reason: record.reviewReason });
+  });
+}
+
 export async function clearCheckinFlag(input: { staffId: number; role: string; recordId: number }): Promise<void> {
   if (input.role !== "admin") throw new Error("ต้องใช้สิทธิ์ผู้ดูแลระบบ");
   if (!Number.isSafeInteger(input.recordId)) throw new Error("ข้อมูลรายการไม่ถูกต้อง");

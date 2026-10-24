@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createSession, destroySession, requireStaff } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
-import { cancelStaffRecord, clearCheckinFlag, deleteCheckinRecord, staffRecordCheckin, updateStaffRecord } from "@/lib/checkin-core";
+import { cancelStaffRecord, clearCheckinFlag, deleteCheckinRecord, requestReview, resolveReview, staffRecordCheckin, updateStaffRecord } from "@/lib/checkin-core";
 import { nowInBangkok } from "@/lib/time";
 import { allowedRooms } from "@/lib/staff-access";
 
@@ -44,6 +44,19 @@ export async function cancelRecord(form: FormData) {
   const result = await cancelStaffRecord({ staffId: Number(actor.id), isAdmin: actor.role === "admin", allowedRooms: await allowedRooms(actor), recordId: Number(form.get("recordId")) });
   if (!result.ok) throw new Error(result.message);
   revalidatePath("/staff"); revalidatePath("/staff/report");
+}
+
+export async function requestRecordReview(form: FormData) {
+  const actor = await requireStaff();
+  const result = await requestReview({ staffId: Number(actor.id), isAdmin: actor.role === "admin", allowedRooms: await allowedRooms(actor), recordId: Number(form.get("recordId")), reason: String(form.get("reason") ?? ""), now: nowInBangkok().wallClock });
+  if (!result.ok) throw new Error(result.message);
+  revalidatePath("/staff");
+}
+
+export async function resolveRecordReview(form: FormData) {
+  const actor = await requireStaff(true); const id = Number(form.get("recordId"));
+  if (!Number.isSafeInteger(id)) throw new Error("ข้อมูลรายการไม่ถูกต้อง");
+  await resolveReview({ staffId: Number(actor.id), role: actor.role, recordId: id }); revalidatePath("/staff");
 }
 
 export async function clearFlag(form: FormData) {

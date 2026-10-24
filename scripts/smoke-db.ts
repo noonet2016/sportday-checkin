@@ -1,5 +1,5 @@
 import { prisma } from "../src/lib/prisma";
-import { performCheckin, staffRecordCheckin, clearCheckinFlag, deleteCheckinRecord, updateStaffRecord, cancelStaffRecord, SPORT_REQUIRED_MESSAGE, SLOT_NOT_STARTED_MESSAGE, CHECKIN_ALREADY_DONE_MESSAGE, NOT_EVENT_DAY_MESSAGE, STAFF_STUDENT_ALREADY_CHECKED_IN_MESSAGE } from "../src/lib/checkin-core";
+import { performCheckin, staffRecordCheckin, clearCheckinFlag, deleteCheckinRecord, updateStaffRecord, cancelStaffRecord, requestReview, resolveReview, SPORT_REQUIRED_MESSAGE, SLOT_NOT_STARTED_MESSAGE, CHECKIN_ALREADY_DONE_MESSAGE, NOT_EVENT_DAY_MESSAGE, STAFF_STUDENT_ALREADY_CHECKED_IN_MESSAGE } from "../src/lib/checkin-core";
 import type { CheckinGpsSample } from "../src/lib/spoof";
 import { nowInBangkok } from "../src/lib/time";
 import { allowedRooms, roomAllowed } from "../src/lib/staff-access";
@@ -139,6 +139,15 @@ async function main() {
     await check("admin can edit a student's own check-in", async () => adminEditSelf.ok && (await prisma.checkinRecord.findUnique({ where: { id: selfRow!.id }, select: { role: true } }))?.role === "cheer");
     const cancelOwn = await cancelStaffRecord({ staffId: staff.id, isAdmin: false, allowedRooms: staffScope, recordId: staffRow!.id });
     await check("staff cancels an in-scope on-behalf record with audit", async () => cancelOwn.ok && !await prisma.checkinRecord.findUnique({ where: { id: staffRow!.id } }) && Boolean(await prisma.auditLog.findFirst({ where: { actor: `staff:${staff.id}`, action: "staff_checkin_cancelled", targetId: String(staffRow!.id) } })));
+    stage = "teacher review request";
+    const reviewOwn = await requestReview({ staffId: staff.id, isAdmin: false, allowedRooms: staffScope, recordId: selfRow!.id, reason: "สงสัยใช้ GPS ปลอม", now: at(9, 0).wallClock });
+    const reviewed = await prisma.checkinRecord.findUnique({ where: { id: selfRow!.id }, select: { reviewRequested: true, reviewReason: true, reviewRequestedBy: true, reviewRequestedAt: true } });
+    await check("teacher can request admin review of an in-scope self check-in", async () => reviewOwn.ok && reviewed?.reviewRequested === true && reviewed.reviewReason === "สงสัยใช้ GPS ปลอม" && reviewed.reviewRequestedBy === staff.id && reviewed.reviewRequestedAt?.toISOString() === "2026-10-26T09:00:00.000Z" && Boolean(await prisma.auditLog.findFirst({ where: { actor: `staff:${staff.id}`, action: "checkin_review_requested" } })));
+    const reviewOut = await requestReview({ staffId: staff.id, isAdmin: false, allowedRooms: staffScope, recordId: outsideRow!.id, reason: "นอกห้อง", now: at(9, 0).wallClock });
+    await check("teacher cannot request review outside their rooms", async () => !reviewOut.ok);
+    const staffResolve = await resolveReview({ staffId: staff.id, role: "staff", recordId: selfRow!.id }).then(() => false, () => true);
+    await resolveReview({ staffId: admin.id, role: "admin", recordId: selfRow!.id });
+    await check("only admin resolves a review; record is kept", async () => staffResolve && (await prisma.checkinRecord.findUnique({ where: { id: selfRow!.id }, select: { reviewRequested: true } }))?.reviewRequested === false);
   } catch (error) {
     const code = error && typeof error === "object" && "code" in error ? String((error as { code: unknown }).code) : "";
     const column = error && typeof error === "object" && "meta" in error && (error as { meta?: { column_name?: unknown } }).meta?.column_name ? ` column=${String((error as { meta: { column_name: unknown } }).meta.column_name)}` : "";

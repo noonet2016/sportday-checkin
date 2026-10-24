@@ -48,6 +48,8 @@ export default async function Room({
   }) : [];
 
   const map = new Map(records.map(r => [r.studentId, r]));
+  const reviewerIds = [...new Set(records.map(r => r.reviewRequestedBy).filter((id): id is number => id !== null))];
+  const reviewers = new Map((reviewerIds.length ? await prisma.staff.findMany({ where: { id: { in: reviewerIds } }, select: { id: true, displayName: true } }) : []).map(x => [x.id, x.displayName]));
   const fence = await getGeofence();
   // Spoof-detection reasons are for the admin to judge; teachers do not see them (Trainer, 2026-10-24).
   const isAdmin = session.role === "admin";
@@ -145,7 +147,7 @@ export default async function Room({
 
                 {r && distanceText(r) && <div className="text-sm text-slate-700">📍 {distanceText(r)}</div>}
 
-                {r && <RecordEditor record={r} isAdmin={session.role === "admin"} />}
+                {r && <RecordEditor record={r} isAdmin={session.role === "admin"} reviewerName={r.reviewRequestedBy ? reviewers.get(r.reviewRequestedBy) ?? null : null} />}
 
                 {r && (r.lat !== 0 || r.lng !== 0) && (
                   <div>
@@ -244,7 +246,7 @@ export default async function Room({
                           <button className="secondary">บันทึก</button>
                         </form>
                       ))}
-                      {r && <RecordEditor record={r} isAdmin={session.role === "admin"} />}
+                      {r && <RecordEditor record={r} isAdmin={session.role === "admin"} reviewerName={r.reviewRequestedBy ? reviewers.get(r.reviewRequestedBy) ?? null : null} />}
                       {r?.isSuspicious && session.role === "admin" && (
                         <form action={clearFlag} className="mb-1">
                           <input type="hidden" name="recordId" value={r.id} />

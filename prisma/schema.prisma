@@ -99,6 +99,11 @@ model CheckinRecord {
   staff             Staff?      @relation(fields: [staffId], references: [id], onDelete: SetNull)
   note              String?     @db.Text
   checkedInAt       DateTime    @default(now()) @map("checked_in_at") @db.DateTime(0)
+  // Teacher → admin review request on a student's own check-in (separate from the automatic GPS flag).
+  reviewRequested   Boolean     @default(false) @map("review_requested")
+  reviewReason      String?     @map("review_reason") @db.Text
+  reviewRequestedBy Int?        @map("review_requested_by")
+  reviewRequestedAt DateTime?   @map("review_requested_at") @db.DateTime(0)
 
   @@unique([studentId, slotId])
   @@index([slotId])
