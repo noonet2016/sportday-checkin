@@ -5,7 +5,8 @@ import { getSession } from "@/lib/session";
 import { formatThaiDateFull } from "@/lib/time";
 import StaffNav from "../StaffNav";
 import ProgressBar from "../ui/ProgressBar";
-import { Download, Search } from "lucide-react";
+import { Download } from "lucide-react";
+import ReportFilters from "./ReportFilters";
 import { allowedRooms, roomFilter } from "@/lib/staff-access";
 import { studentNameFilter } from "@/lib/student-search";
 export const dynamic = "force-dynamic";
@@ -64,26 +65,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
           </div>
           <div className="flex items-center gap-2"><div className="flex-1"><ProgressBar value={students.length ? passedCount * 100 / students.length : 0} tone="emerald" label="สัดส่วนผ่าน" /></div><span className="w-24 text-right text-xs font-semibold tabular-nums text-slate-600">ผ่าน {students.length ? Math.round(passedCount * 100 / students.length) : 0}%</span></div>
         </div>
-        <form className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4 md:grid-cols-[minmax(12rem,16rem)_1fr_auto] md:items-end">
-          {roomOptions.length > 1 && (
-            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">ห้อง
-              <select name="room" defaultValue={pickedKey} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-200">
-                <option value="">ทุกห้อง ({roomOptions.length} ห้อง)</option>
-                {roomOptions.map(r => <option key={`${r.classLevel}|${r.room}`} value={`${r.classLevel}|${r.room}`}>{r.classLevel}/{r.room}{r.program ? ` (${r.program})` : ""}</option>)}
-              </select>
-            </label>
-          )}
-          <label className={`grid gap-1.5 text-sm font-semibold text-slate-700 ${roomOptions.length > 1 ? "" : "md:col-span-2"}`}>ค้นหานักเรียน
-            <span className="relative block">
-              <Search aria-hidden="true" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input name="q" type="search" defaultValue={q ?? ""} placeholder="ชื่อ นามสกุล หรือเลขประจำตัว" className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-base font-normal text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-200" />
-            </span>
-          </label>
-          <div className="flex gap-2">
-            <button className="h-11 flex-1 whitespace-nowrap rounded-xl bg-violet-700 px-5 font-semibold text-white hover:bg-violet-800 md:flex-none">แสดงผล</button>
-            {(q || pickedKey) && <a className="inline-flex h-11 items-center whitespace-nowrap rounded-xl bg-slate-700 px-4 font-semibold text-white no-underline hover:bg-slate-800" href="/staff/report">ล้างตัวกรอง</a>}
-          </div>
-        </form>
+        <ReportFilters rooms={roomOptions.map(r => ({ key: `${r.classLevel}|${r.room}`, label: `${r.classLevel}/${r.room}${r.program ? ` (${r.program})` : ""}` }))} roomCount={roomOptions.length} pickedKey={pickedKey} q={q ?? ""} />
         {pager}
         {pageRoom && <div className="flex flex-wrap items-center gap-2 text-sm"><span className="font-semibold text-slate-700">ห้อง {pageRoom.classLevel}/{pageRoom.room}</span><span className="rounded-full bg-emerald-100 px-2.5 py-0.5 font-semibold text-emerald-800">ผ่าน {shownPassed}</span><span className="rounded-full bg-rose-100 px-2.5 py-0.5 font-semibold text-rose-800">ไม่ผ่าน {shown.length - shownPassed}</span><span className="rounded-full bg-slate-100 px-2.5 py-0.5 font-semibold text-slate-700">ทั้งหมด {shown.length} คน</span></div>}
         <div className="grid gap-2 md:hidden">
