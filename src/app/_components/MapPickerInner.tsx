@@ -48,7 +48,7 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
 
   return (
     <div className="space-y-3">
-      <div className="relative isolate z-0 h-72 overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-950 shadow-inner">
+      <div className="relative isolate z-0 h-[60vh] min-h-[420px] max-h-[720px] overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-950 shadow-inner">
         <MapContainer center={position} zoom={17} scrollWheelZoom className="h-full w-full">
           {basemap === "satellite" ? (
             <TileLayer key="sat" attribution="Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics" url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} />
