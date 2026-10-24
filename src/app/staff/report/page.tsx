@@ -76,7 +76,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
           </article>; })}
         </div>
         <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[72rem] text-left text-sm">
+          <table className="w-full min-w-[72rem] border-collapse text-left text-sm">
             <thead className="bg-slate-50 text-slate-800 [&_th]:border [&_th]:border-slate-300 [&_th]:px-2 [&_th]:py-1.5">
               <tr>
                 <th rowSpan={2}>เลขที่</th>
@@ -91,7 +91,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                 {days.flatMap(d => d.slots.map(s => <th key={s.id} className="whitespace-nowrap text-center font-medium">{periodLabel(s.period)}</th>))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="[&_td]:border [&_td]:border-slate-300 [&_td]:px-2 [&_td]:py-1.5 [&_tr:nth-child(even)]:bg-slate-50/60">
               {shown.map(s => {
                 const done = attendedOf(s.id);
                 const passed = attendancePassed(done, allSlots.length);
@@ -102,7 +102,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                     <td>{s.classLevel}/{s.room} {s.program}</td>
                     {days.flatMap(d => d.slots.map(slot => {
                       const r = map.get(`${s.id}:${slot.id}`);
-                      return <td key={slot.id} className="border-x border-slate-200 text-center" title={r ? roleLabel(r.role) : "ยังไม่เช็ก"}><span aria-label={r ? roleLabel(r.role) : "ยังไม่เช็ก"} className={`inline-block h-3 w-3 rounded-sm ${r ? "bg-emerald-500" : "bg-slate-200"}`} /></td>;
+                      return <td key={slot.id} className="text-center" title={r ? roleLabel(r.role) : "ยังไม่เช็ก"}><span aria-label={r ? roleLabel(r.role) : "ยังไม่เช็ก"} className={`inline-block h-3 w-3 rounded-sm ${r ? "bg-emerald-500" : "bg-slate-200"}`} /></td>;
                     }))}
                     <td>{done}/{allSlots.length}</td>
                     <td className={`whitespace-nowrap font-bold ${passed ? "text-emerald-700" : "text-red-700"}`}>{attendancePercent(done, allSlots.length)}%</td>
