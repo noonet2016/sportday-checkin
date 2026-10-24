@@ -36,30 +36,12 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
   const position = useMemo<[number, number]>(() => [value.lat, value.lng], [value.lat, value.lng]);
   const [basemap, setBasemap] = useState<"street" | "satellite">("satellite");
   const [locating, setLocating] = useState(false);
-  const [search, setSearch] = useState("");
-  const [results, setResults] = useState<Array<{ lat: string; lon: string; display_name: string }>>([]);
-  const [searching, setSearching] = useState(false);
-  const [searchMessage, setSearchMessage] = useState("");
   const [paste, setPaste] = useState("");
   const [pasteMessage, setPasteMessage] = useState("");
 
   function applyPoint(point: { lat: number; lng: number }) {
     onChange({ ...value, ...point });
     setPasteMessage(isThailandPoint(point) ? "" : "ตำแหน่งอยู่นอกกรอบประเทศไทย โปรดตรวจสอบอีกครั้ง");
-  }
-
-  // Not a <form>: this picker renders inside the settings <form>, and nested forms make Enter submit the outer one.
-  async function searchPlaces() {
-    if (!search.trim() || searching) return;
-    setSearching(true); setSearchMessage(""); setResults([]);
-    try {
-      const response = await fetch(`/staff/api/geocode?q=${encodeURIComponent(search.trim())}`);
-      if (!response.ok) throw new Error("network");
-      const data = await response.json() as Array<{ lat: string; lon: string; display_name: string }>;
-      setResults(data);
-      if (!data.length) setSearchMessage("ไม่พบสถานที่ ลองใช้ชื่ออื่น หรือวางพิกัดจาก Google Maps");
-    } catch { setSearchMessage("ค้นหาไม่สำเร็จ โปรดลองอีกครั้ง"); }
-    finally { setSearching(false); }
   }
 
   async function applyPastedLocation() {
@@ -91,14 +73,6 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
-        <label className="block text-sm font-semibold text-slate-800">ค้นหาสถานที่
-          <input value={search} onChange={(event) => setSearch(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900" placeholder="ชื่อสถานที่ในประเทศไทย" onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void searchPlaces(); } }} />
-        </label>
-        <button type="button" onClick={() => void searchPlaces()} disabled={searching} className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:bg-emerald-400">{searching ? "กำลังค้นหา…" : "ค้นหา"}</button>
-        {searchMessage && <p role="status" className="break-words text-sm text-slate-700">{searchMessage}</p>}
-        {results.length > 0 && <ul className="max-h-64 space-y-2 overflow-y-auto">{results.map((result, index) => <li key={`${result.lat}:${result.lon}:${index}`}><button type="button" onClick={() => { applyPoint({ lat: Number(result.lat), lng: Number(result.lon) }); setSearchMessage(""); }} className="w-full whitespace-normal break-words rounded-lg border border-slate-200 p-3 text-left text-sm text-slate-800 hover:bg-emerald-50">{result.display_name}</button></li>)}</ul>}
-      </div>
       <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
         <label className="block text-sm font-semibold text-slate-800">วางพิกัดหรือลิงก์จาก Google Maps
           <input value={paste} onChange={(event) => setPaste(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void applyPastedLocation(); } }} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900" />
