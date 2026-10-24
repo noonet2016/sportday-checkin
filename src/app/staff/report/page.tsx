@@ -1,4 +1,4 @@
-import { attendancePassed, attendancePercent, compareRooms, PASS_RATIO, periodLabel, periodOrder, roleLabel } from "@/lib/event";
+import { attendancePassed, attendancePercent, compareRooms, compareStudents, PASS_RATIO, periodLabel, periodOrder, roleLabel } from "@/lib/event";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -19,7 +19,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
   const ids = students.map(s => s.id);
   const records = ids.length ? await prisma.checkinRecord.findMany({ where: { studentId: { in: ids } }, select: { studentId: true, slotId: true, role: true } }) : [];
   const map = new Map(records.map(r => [`${r.studentId}:${r.slotId}`, r]));
-  students.sort(compareRooms);
+  students.sort(compareStudents);
   days.forEach(d => d.slots.sort((a, b) => periodOrder(a.period) - periodOrder(b.period)));
   const allSlots = days.flatMap(d => d.slots);
   const attendedOf = (studentId: number) => allSlots.filter(slot => map.has(`${studentId}:${slot.id}`)).length;

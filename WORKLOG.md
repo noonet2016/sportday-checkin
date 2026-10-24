@@ -39,3 +39,4 @@
 - 15:19 Symboli Rudolf (Claude): เลขที่ moved to first column in report page and CSV (room page table already had it first). Verified page headers/rows and CSV.
 - 15:21 Symboli Rudolf (Claude): Dates displayed Thai-style via formatThaiDate() in src/lib/time.ts ('จ. 26 ต.ค.' / 'จ. 26 ต.ค. 2569' BE): report column headers + daily summary, CSV headers, room page slot line + picker, settings slot list. URLs/form values keep ISO. Unit test 13/13; verified all pages + CSV.
 - 15:25 Symboli Rudolf (Claude): Room page back to strict เลขที่ order (removed unchecked-first sort — Trainer found it confusing); hint line now 'กดบันทึกแทนได้ที่แถวของนักเรียนคนนั้น'. Verified desktop + mobile 1..38 in order.
+- 15:27 Symboli Rudolf (Claude): Report + CSV now sort explicitly with compareStudents (room numeric → เลขที่ → code) instead of relying on DB order + stable room sort. Was already correct in practice (verified 1/4 1..38, all rooms); now guaranteed. Unit test 14/14.

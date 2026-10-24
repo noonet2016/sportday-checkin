@@ -1,4 +1,4 @@
-import { attendancePassed, attendancePercent, compareRooms, periodLabel, periodOrder, roleCsvLabel } from "@/lib/event";
+import { attendancePassed, attendancePercent, compareStudents, periodLabel, periodOrder, roleCsvLabel } from "@/lib/event";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     select: { studentId: true, slotId: true, role: true }
   }) : [];
   const map = new Map(records.map(r => [`${r.studentId}:${r.slotId}`, r]));
-  students.sort(compareRooms);
+  students.sort(compareStudents);
   days.forEach(d => d.slots.sort((a, b) => periodOrder(a.period) - periodOrder(b.period)));
 
   const q = (x: unknown) => `"${String(x ?? "").replaceAll('"', '""')}"`;

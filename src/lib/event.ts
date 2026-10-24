@@ -42,6 +42,10 @@ export function resolveDefaultSlot(wallClock: Date, eventDates: readonly string[
   return { date: selected.date, period: selected.period };
 }
 
+/** Room (numeric), then เลขที่, then student code — the order every student list uses. */
+export function compareStudents(a: { classLevel: string; room: string; number: number | null; studentCode: string }, b: { classLevel: string; room: string; number: number | null; studentCode: string }): number {
+  return compareRooms(a, b) || (a.number ?? Number.MAX_SAFE_INTEGER) - (b.number ?? Number.MAX_SAFE_INTEGER) || a.studentCode.localeCompare(b.studentCode);
+}
 export function compareRooms(a: { classLevel: string; room: string }, b: { classLevel: string; room: string }): number {
   const numericAware = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
   return numericAware.compare(a.classLevel, b.classLevel) || numericAware.compare(a.room, b.room);

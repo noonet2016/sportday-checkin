@@ -97,3 +97,13 @@ test("formatThaiDate renders Thai weekday, month and Buddhist year", async () =>
   assert.equal(formatThaiDate(d, { year: true }), "จ. 26 ต.ค. 2569");
   assert.equal(formatThaiDate(new Date(Date.UTC(2026, 9, 30)), { weekday: false, year: true }), "30 ต.ค. 2569");
 });
+
+test("compareStudents orders by room numerically, then เลขที่", async () => {
+  const { compareStudents } = await import("../src/lib/event");
+  const rows = [
+    { classLevel: "1", room: "15", number: 1, studentCode: "a" },
+    { classLevel: "1", room: "4", number: 10, studentCode: "b" },
+    { classLevel: "1", room: "4", number: 2, studentCode: "c" },
+  ].sort(compareStudents);
+  assert.deepEqual(rows.map(r => `${r.room}:${r.number}`), ["4:2", "4:10", "15:1"]);
+});
