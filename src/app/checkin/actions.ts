@@ -8,7 +8,7 @@ import type { CheckinGpsSample } from "@/lib/spoof";
 
 type Input = { role: "compete" | "cheer"; sport?: string; lat: number; lng: number; accuracy: number; samples: CheckinGpsSample[] };
 
-export async function submitCheckin(input: Input): Promise<{ ok: boolean; message: string }> {
+export async function submitCheckin(input: Input): Promise<{ ok: boolean; message: string; distanceM?: number; radiusM?: number }> {
   const session = await requireSession();
   if (session.role !== "student") return { ok: false, message: "ต้องใช้บัญชีนักเรียน" };
   const student = await prisma.student.findUnique({ where: { studentCode: session.id }, select: { id: true } });

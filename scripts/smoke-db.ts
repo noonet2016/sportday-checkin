@@ -61,6 +61,8 @@ async function main() {
     stage = "self-check-in core and audit";
     const openResult = await performCheckin({ studentId: student.id, now: at(8, 30), role: "compete", sport: "track", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: "127.0.0.1" });
     await check("open-window accepts and persists one row plus audit", async () => openResult.ok && Boolean(await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: student.id, slotId: morning.id } } })) && Boolean(await prisma.auditLog.findFirst({ where: { actor: `student:${student.id}`, action: "checkin_created" } })));
+    await check("self check-in time is stored as Bangkok wall-clock (08:30, not 01:30)", async () => (await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: student.id, slotId: morning.id } }, select: { checkedInAt: true } }))?.checkedInAt.toISOString() === "2026-10-26T08:30:00.000Z");
+    await check("check-in result reports distance and radius", async () => typeof openResult.distanceM === "number" && typeof openResult.radiusM === "number" && openResult.distanceM <= openResult.radiusM);
     const duplicate = await performCheckin({ studentId: student.id, now: at(8, 30), role: "compete", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
     await check("second call returns friendly already-checked-in result and row count stays 1", async () => duplicate.ok && duplicate.message === CHECKIN_ALREADY_DONE_MESSAGE && await prisma.checkinRecord.count({ where: { studentId: student.id, slotId: morning.id } }) === 1);
 

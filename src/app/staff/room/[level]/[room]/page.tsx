@@ -3,6 +3,7 @@ import Link from "next/link";
 import StaffNav from "../../../StaffNav";
 import RecordEditor from "../../../RecordEditor";
 import RoleSportFields from "../../../RoleSportFields";
+import { distanceFromCentre, getGeofence } from "@/lib/geofence";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -44,6 +45,12 @@ export default async function Room({
   }) : [];
 
   const map = new Map(records.map(r => [r.studentId, r]));
+  const fence = await getGeofence();
+  const distanceText = (r: { source: string; lat: number; lng: number }) => {
+    if (!fence || r.source !== "self") return null;
+    const d = distanceFromCentre(fence, r.lat, r.lng);
+    return `${d > fence.radius ? "⚠️ นอกรัศมี" : "ในรัศมี"} ~${d} ม. (กำหนด ${fence.radius} ม.)`;
+  };
   // Not-yet-checked students first so the on-behalf forms are at the top; Array.sort is stable, so number order is kept within each group.
   students.sort((x, y) => Number(map.has(x.id)) - Number(map.has(y.id)));
   const missingCount = students.filter(s => !map.has(s.id)).length;
@@ -103,6 +110,8 @@ export default async function Room({
                     ⚠️ <b>เหตุผลธง:</b> {r.suspicionReasons}
                   </div>
                 )}
+
+                {r && distanceText(r) && <div className="text-sm text-slate-700">📍 {distanceText(r)}</div>}
 
                 {r && <RecordEditor record={r} isAdmin={session.role === "admin"} />}
 
@@ -190,6 +199,7 @@ export default async function Room({
                     <td>{r ? formatWallClockTime(r.checkedInAt, true) : "—"}</td>
                     <td className="break-words max-w-xs">{r?.suspicionReasons ?? "—"}</td>
                     <td>
+                      {r && distanceText(r) && <div className="mb-1 whitespace-nowrap text-xs text-slate-700">📍 {distanceText(r)}</div>}
                       {r && (r.lat !== 0 || r.lng !== 0) ? (
                         <a target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${r.lat},${r.lng}`}>
                           เปิดแผนที่

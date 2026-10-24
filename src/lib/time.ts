@@ -12,11 +12,15 @@
 //  2. Real instants (e.g. "right now" for a page header) — these need genuine Bangkok conversion,
 //     `timeZone: "Asia/Bangkok"`.
 export const BANGKOK_TZ = "Asia/Bangkok";
+const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
 
-/** Server clock; DEV_NOW is deliberately ignored in production. The value is a Bangkok wall-clock ISO. */
+/**
+ * Server clock; DEV_NOW is deliberately ignored in production. The value is a Bangkok wall-clock ISO,
+ * so it is converted to the real instant (Bangkok = UTC+7, no DST) — nowInBangkok() adds the +7 back.
+ */
 export function serverNow(): Date {
   const override = process.env.NODE_ENV !== "production" ? process.env.DEV_NOW : undefined;
-  if (override) { const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(override); if (match) return new Date(Date.UTC(Number(match[1]), Number(match[2])-1, Number(match[3]), Number(match[4]), Number(match[5]), Number(match[6]??0))); }
+  if (override) { const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(override); if (match) return new Date(Date.UTC(Number(match[1]), Number(match[2])-1, Number(match[3]), Number(match[4]), Number(match[5]), Number(match[6]??0)) - BANGKOK_OFFSET_MS); }
   return new Date();
 }
 

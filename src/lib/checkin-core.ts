@@ -1,15 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { resolveSlotWindow } from "@/lib/event";
-import { haversineDistance } from "@/lib/geo";
 import { scoreSuspicion, type CheckinGpsSample } from "@/lib/spoof";
 import { writeAudit } from "@/lib/audit";
+import { distanceFromCentre, getGeofence } from "@/lib/geofence";
 import type { RoomKey } from "@/lib/staff-access";
 import type { Prisma } from "@/generated/prisma/client";
 
 // Server-only domain operations shared by the authenticated actions and the local DB smoke test.
 const SPORT_REQUIRED = false;
 type CheckinRole = "compete" | "cheer";
-type Result = { ok: boolean; message: string };
+type Result = { ok: boolean; message: string; distanceM?: number; radiusM?: number };
 type CheckinNow = { dateOnly: Date; wallClock: Date };
 export const CHECKIN_ALREADY_DONE_MESSAGE = "คุณเช็คอินช่วงนี้ไปแล้ว";
 export const NOT_EVENT_DAY_MESSAGE = "วันนี้ไม่มีกิจกรรมกีฬาสี";
@@ -28,18 +28,18 @@ export async function performCheckin(input: { studentId: number; now: CheckinNow
   const eventDay = await prisma.eventDay.findUnique({ where: { date: input.now.dateOnly }, select: { id: true } });
   const slot = eventDay ? await prisma.checkinSlot.findUnique({ where: { eventDayId_period: { eventDayId: eventDay.id, period: window.period } }, select: { id: true } }) : null;
   if (!slot) return { ok: false, message: "ยังไม่ได้ตั้งค่ารอบเช็คชื่อวันนี้ กรุณาติดต่อเจ้าหน้าที่" };
-  const settings = await prisma.systemSetting.findMany({ where: { key: { in: ["geofence_lat", "geofence_lng", "geofence_radius_m"] } } });
-  const value = (key: string) => Number(settings.find((setting) => setting.key === key)?.value);
-  const lat = value("geofence_lat"), lng = value("geofence_lng"), radius = value("geofence_radius_m");
-  if (![lat, lng, radius].every(Number.isFinite) || radius <= 0) return { ok: false, message: "ยังไม่ได้ตั้งค่าพื้นที่โรงเรียน กรุณาติดต่อเจ้าหน้าที่" };
-  if (haversineDistance(input.lat, input.lng, lat, lng) > radius) return { ok: false, message: "คุณอยู่นอกพื้นที่โรงเรียน กรุณาเข้ามาในบริเวณโรงเรียนแล้วลองใหม่" };
+  const fence = await getGeofence();
+  if (!fence) return { ok: false, message: "ยังไม่ได้ตั้งค่าพื้นที่โรงเรียน กรุณาติดต่อเจ้าหน้าที่" };
+  const { lat, lng, radius } = fence;
+  const distanceM = distanceFromCentre(fence, input.lat, input.lng);
+  if (distanceM > radius) return { ok: false, message: `คุณไม่ได้อยู่ในรัศมีที่กำหนด อยู่ห่างจากจุดเช็คชื่อประมาณ ${distanceM} เมตร (กำหนดรัศมี ${radius} เมตร) กรุณาเข้ามาในบริเวณโรงเรียนแล้วลองใหม่`, distanceM, radiusM: radius };
   const suspicion = scoreSuspicion(input.samples, input.lat, input.lng, { name: "campus", lat, lng });
   try {
     await prisma.$transaction(async (tx) => {
-      const record = await tx.checkinRecord.create({ data: { studentId: student.id, slotId: slot.id, role, sport: role === "compete" && sport ? sport.slice(0, 100) : null, lat: input.lat, lng: input.lng, accuracy: input.accuracy, samples: input.samples, ipAddress: input.ip, isSuspicious: suspicion.suspicious, suspicionReasons: suspicion.reasons.join("; ") || null } });
+      const record = await tx.checkinRecord.create({ data: { studentId: student.id, slotId: slot.id, role, sport: role === "compete" && sport ? sport.slice(0, 100) : null, lat: input.lat, lng: input.lng, accuracy: input.accuracy, samples: input.samples, checkedInAt: input.now.wallClock, ipAddress: input.ip, isSuspicious: suspicion.suspicious, suspicionReasons: suspicion.reasons.join("; ") || null } });
       await writeAudit(tx, `student:${student.id}`, "checkin_created", "CheckinRecord", String(record.id), { slotId: slot.id, role, suspicious: suspicion.suspicious });
     });
-    return { ok: true, message: "เช็คชื่อเรียบร้อย ขอให้สนุกกับกิจกรรมกีฬาสีนะ" };
+    return { ok: true, message: "เช็คชื่อเรียบร้อย ขอให้สนุกกับกิจกรรมกีฬาสีนะ", distanceM, radiusM: radius };
   } catch (error) { if ((error as { code?: string }).code === "P2002") return { ok: true, message: CHECKIN_ALREADY_DONE_MESSAGE }; return { ok: false, message: "บันทึกการเช็คชื่อไม่สำเร็จ กรุณาลองใหม่" }; }
 }
 

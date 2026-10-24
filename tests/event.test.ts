@@ -34,14 +34,16 @@ test("scores exact centroid and static GPS samples as suspicious", () => {
 });
 
 test("DEV_NOW is honored only outside production", async () => {
-  const { serverNow } = await import("../src/lib/time");
+  const { serverNow, nowInBangkok } = await import("../src/lib/time");
   const before = { node: process.env.NODE_ENV, override: process.env.DEV_NOW };
   try {
     process.env.DEV_NOW = "2026-10-26T08:30:00";
     Reflect.set(process.env, "NODE_ENV", "development");
-    assert.equal(serverNow().toISOString(), "2026-10-26T08:30:00.000Z");
+    // DEV_NOW is Bangkok wall-clock: the instant is 01:30Z, and the Bangkok view must read 08:30 (no double +7h).
+    assert.equal(serverNow().toISOString(), "2026-10-26T01:30:00.000Z");
+    assert.equal(nowInBangkok().wallClock.toISOString(), "2026-10-26T08:30:00.000Z");
     Reflect.set(process.env, "NODE_ENV", "production");
-    assert.notEqual(serverNow().toISOString(), "2026-10-26T08:30:00.000Z");
+    assert.notEqual(serverNow().toISOString(), "2026-10-26T01:30:00.000Z");
   } finally {
     if (before.node === undefined) Reflect.deleteProperty(process.env, "NODE_ENV"); else Reflect.set(process.env, "NODE_ENV", before.node);
     if (before.override === undefined) delete process.env.DEV_NOW; else process.env.DEV_NOW = before.override;
