@@ -2,6 +2,7 @@ import { prisma } from "../src/lib/prisma";
 import { performCheckin, staffRecordCheckin, clearCheckinFlag, deleteCheckinRecord } from "../src/lib/checkin-core";
 import type { CheckinGpsSample } from "../src/lib/spoof";
 import { nowInBangkok } from "../src/lib/time";
+import { allowedRooms, roomAllowed } from "../src/lib/staff-access";
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is required");
@@ -45,8 +46,17 @@ async function main() {
     const geoStudent = await prisma.student.create({ data: { studentCode: `${token}-geo`, firstName: "Smoke", lastName: "Test", classLevel: "TEST", room: "0", house: "purple", lineUserId: `line-geo-${token}` } }); studentIds.push(geoStudent.id);
     const suspiciousStudent = await prisma.student.create({ data: { studentCode: `${token}-suspicious`, firstName: "Smoke", lastName: "Test", classLevel: "TEST", room: "0", house: "purple", lineUserId: `line-suspicious-${token}` } }); studentIds.push(suspiciousStudent.id);
     const staffStudent = await prisma.student.create({ data: { studentCode: `${token}-stafftarget`, firstName: "Smoke", lastName: "Test", classLevel: "TEST", room: "0", house: "purple", lineUserId: `line-stafftarget-${token}` } }); studentIds.push(staffStudent.id);
+    const outsideStudent = await prisma.student.create({ data: { studentCode: `${token}-outside`, firstName: "Smoke", lastName: "Test", classLevel: "TEST", room: "1", house: "purple", lineUserId: `line-outside-${token}` } }); studentIds.push(outsideStudent.id);
     const admin = await prisma.staff.create({ data: { username: `${token}-admin`, passwordHash: "not-a-login-hash", displayName: "Smoke Test", role: "admin" } }); staffIds.push(admin.id); auditActors.push(`admin:${admin.id}`, `staff:${admin.id}`);
     const staff = await prisma.staff.create({ data: { username: `${token}-staff`, passwordHash: "not-a-login-hash", displayName: "Smoke Test", role: "staff" } }); staffIds.push(staff.id); auditActors.push(`staff:${staff.id}`);
+    await prisma.staffRoom.create({ data: { staffId: staff.id, classLevel: "TEST", room: "0" } });
+    const staffScope = await allowedRooms({ role: "staff", id: String(staff.id) });
+    const adminScope = await allowedRooms({ role: "admin", id: String(admin.id) });
+    const scopedTotals = await prisma.student.count({ where: { house: "purple", OR: staffScope.map(r => ({ classLevel: r.classLevel, room: r.room })) } });
+    const allTotals = await prisma.student.count({ where: { house: "purple" } });
+    const exactRoomTotal = await prisma.student.count({ where: { house: "purple", classLevel: "TEST", room: "0" } });
+    await check("staff totals include only assigned rooms; admin scope remains all rooms", async () => staffScope.length === 1 && staffScope[0].classLevel === "TEST" && staffScope[0].room === "0" && scopedTotals === exactRoomTotal && adminScope.length >= 15 && allTotals >= scopedTotals);
+    await check("staff room page scope denies unassigned room", async () => roomAllowed(staffScope, "TEST", "0") && !roomAllowed(staffScope, "TEST", "1"));
 
     stage = "self-check-in core and audit";
     const openResult = await performCheckin({ studentId: student.id, now: at(8, 30), role: "compete", sport: "track", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: "127.0.0.1" });
@@ -76,12 +86,14 @@ async function main() {
     await check("unbound and non-purple student accounts reject", async () => !unboundResult.ok && !nonpurpleResult.ok);
 
     stage = "staff check-in core";
-    const emptyReason = await staffRecordCheckin({ staffId: admin.id, studentId: staffStudent.id, slotId: morning.id, role: "compete", reason: " ", now: at(8, 30).wallClock });
+    const emptyReason = await staffRecordCheckin({ staffId: admin.id, isAdmin: true, allowedRooms: adminScope, studentId: staffStudent.id, slotId: morning.id, role: "compete", reason: " ", now: at(8, 30).wallClock });
     await check("staff on-behalf empty reason rejects", async () => !emptyReason.ok && !(await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: staffStudent.id, slotId: morning.id } } })));
-    const staffResult = await staffRecordCheckin({ staffId: admin.id, studentId: staffStudent.id, slotId: morning.id, role: "cheer", reason: "late arrival", now: at(8, 30).wallClock });
+    const staffResult = await staffRecordCheckin({ staffId: admin.id, isAdmin: true, allowedRooms: adminScope, studentId: staffStudent.id, slotId: morning.id, role: "cheer", reason: "late arrival", now: at(8, 30).wallClock });
     const staffRow = await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: staffStudent.id, slotId: morning.id } }, select: { id: true, source: true, staffId: true } });
     await check("staff on-behalf with reason persists source, staffId and audit", async () => staffResult.ok && staffRow?.source === "staff" && staffRow.staffId === admin.id && Boolean(await prisma.auditLog.findFirst({ where: { actor: `staff:${admin.id}`, action: "staff_checkin_created", targetId: String(staffRow.id) } })));
-    const selfAlready = await staffRecordCheckin({ staffId: admin.id, studentId: student.id, slotId: morning.id, role: "cheer", reason: "student already self checked in", now: at(8, 30).wallClock });
+    const outOfScope = await staffRecordCheckin({ staffId: staff.id, studentId: outsideStudent.id, slotId: afternoon.id, role: "cheer", reason: "out of scope test", now: at(8, 30).wallClock, allowedRooms: staffScope });
+    await check("staff on-behalf record for out-of-scope student rejects", async () => !outOfScope.ok && !await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: outsideStudent.id, slotId: afternoon.id } } }));
+    const selfAlready = await staffRecordCheckin({ staffId: admin.id, isAdmin: true, allowedRooms: adminScope, studentId: student.id, slotId: morning.id, role: "cheer", reason: "student already self checked in", now: at(8, 30).wallClock });
     await check("staff on-behalf after self-check rejects explicitly without creating a row", async () => !selfAlready.ok && selfAlready.message.includes("already checked in") && await prisma.checkinRecord.count({ where: { studentId: student.id, slotId: morning.id } }) === 1);
 
     stage = "admin clear-flag and delete cores";

@@ -3,6 +3,7 @@ import { resolveSlotWindow } from "@/lib/event";
 import { haversineDistance } from "@/lib/geo";
 import { scoreSuspicion, type CheckinGpsSample } from "@/lib/spoof";
 import { writeAudit } from "@/lib/audit";
+import type { RoomKey } from "@/lib/staff-access";
 
 // Server-only domain operations shared by the authenticated actions and the local DB smoke test.
 const SPORT_REQUIRED = false;
@@ -38,12 +39,12 @@ export async function performCheckin(input: { studentId: number; now: CheckinNow
   } catch (error) { if ((error as { code?: string }).code === "P2002") return { ok: true, message: "You have already checked in for this slot." }; return { ok: false, message: "Could not save your check-in. Please try again." }; }
 }
 
-export async function staffRecordCheckin(input: { staffId: number; studentId: number; slotId: number; role: string; sport?: string; reason: string; now: Date }): Promise<Result> {
+export async function staffRecordCheckin(input: { staffId: number; studentId: number; slotId: number; role: string; sport?: string; reason: string; now: Date; allowedRooms?: RoomKey[]; isAdmin?: boolean }): Promise<Result> {
   const reason = input.reason.trim();
   if (!Number.isSafeInteger(input.studentId) || !Number.isSafeInteger(input.slotId) || !["compete", "cheer"].includes(input.role) || reason.length < 3 || reason.length > 500) return { ok: false, message: "A valid role and reason (3–500 characters) are required." };
   try {
     await prisma.$transaction(async tx => {
-      const student = await tx.student.findFirst({ where: { id: input.studentId, house: "purple" }, select: { id: true } });
+      const student = await tx.student.findFirst({ where: { id: input.studentId, house: "purple", ...(input.isAdmin ? {} : { OR: (input.allowedRooms ?? []).map(({ classLevel, room }) => ({ classLevel, room })) }) }, select: { id: true } });
       const slot = await tx.checkinSlot.findUnique({ where: { id: input.slotId }, select: { id: true } });
       if (!student || !slot) throw new Error("Student or slot not found");
       if (await tx.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: input.studentId, slotId: input.slotId } }, select: { id: true } })) throw new Error("Student already checked in for this slot; staff on-behalf check-in was not created.");

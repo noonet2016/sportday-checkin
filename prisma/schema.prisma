@@ -42,8 +42,20 @@ model Staff {
   createdAt      DateTime        @default(now()) @map("created_at") @db.DateTime(0)
   updatedAt      DateTime        @updatedAt @map("updated_at") @db.DateTime(0)
   checkinRecords CheckinRecord[]
+  rooms          StaffRoom[]
 
   @@map("staff")
+}
+
+model StaffRoom {
+  staffId   Int    @map("staff_id")
+  staff     Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  classLevel String @map("class_level") @db.VarChar(30)
+  room       String @db.VarChar(20)
+
+  @@id([staffId, classLevel, room])
+  @@index([classLevel, room])
+  @@map("staff_rooms")
 }
 
 model EventDay {

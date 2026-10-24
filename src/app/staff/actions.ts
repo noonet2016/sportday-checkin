@@ -7,6 +7,7 @@ import { createSession, destroySession, requireStaff } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
 import { clearCheckinFlag, deleteCheckinRecord, staffRecordCheckin } from "@/lib/checkin-core";
 import { nowInBangkok } from "@/lib/time";
+import { allowedRooms } from "@/lib/staff-access";
 
 export async function loginStaff(form: FormData) {
   const username = String(form.get("username") ?? "").trim().toLowerCase();
@@ -24,7 +25,8 @@ export async function manualRecord(form: FormData) {
   const studentId = Number(form.get("studentId")); const slotId = Number(form.get("slotId"));
   const role = String(form.get("role")); const reason = String(form.get("reason") ?? "").trim(); const sport = String(form.get("sport") ?? "").trim();
   if (!Number.isSafeInteger(studentId) || !Number.isSafeInteger(slotId) || !["compete", "cheer"].includes(role) || reason.length < 3 || reason.length > 500) throw new Error("Invalid manual check-in input");
-  const result = await staffRecordCheckin({ staffId: Number(actor.id), studentId, slotId, role, sport, reason, now: nowInBangkok().wallClock });
+  const rooms = await allowedRooms(actor);
+  const result = await staffRecordCheckin({ staffId: Number(actor.id), studentId, slotId, role, sport, reason, now: nowInBangkok().wallClock, allowedRooms: rooms, isAdmin: actor.role === "admin" });
   if (!result.ok) throw new Error(result.message);
   revalidatePath("/staff"); revalidatePath("/staff/report");
 }
@@ -45,4 +47,30 @@ export async function saveSettings(form: FormData) {
   const actor = await requireStaff(true); const lat = Number(form.get("lat")); const lng = Number(form.get("lng")); const radius = Number(form.get("radius"));
   if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180 || !Number.isInteger(radius) || radius < 10 || radius > 10000) throw new Error("Invalid geofence settings");
   await prisma.$transaction(async tx => { for (const [key, value] of [["geofence_lat", lat], ["geofence_lng", lng], ["geofence_radius_m", radius]] as const) await tx.systemSetting.upsert({ where: { key }, update: { value: String(value) }, create: { key, value: String(value) } }); await writeAudit(tx, `admin:${actor.id}`, "geofence_updated", "SystemSetting", "geofence", { lat, lng, radius }); }); revalidatePath("/staff/settings");
+}
+
+export async function createStaff(form: FormData) {
+  const actor = await requireStaff(true);
+  const username=String(form.get("username")??"").trim().toLowerCase(), displayName=String(form.get("displayName")??"").trim(), password=String(form.get("password")??""), role=String(form.get("role")??"staff");
+  if(!/^[a-z0-9._-]{2,100}$/.test(username)||!displayName||displayName.length>150||password.length<8||password.length>200||!(["staff","admin"].includes(role))) throw new Error("Invalid staff details");
+  const hash=await bcrypt.hash(password,12);
+  await prisma.$transaction(async tx=>{const user=await tx.staff.create({data:{username,displayName,passwordHash:hash,role}});await writeAudit(tx,`admin:${actor.id}`,"staff_created","Staff",String(user.id),{username,role});});
+  revalidatePath("/staff/users");
+}
+
+export async function resetStaffPassword(form: FormData) {
+ const actor=await requireStaff(true), id=Number(form.get("staffId")), password=String(form.get("password")??""); if(!Number.isSafeInteger(id)||password.length<8||password.length>200) throw new Error("Invalid password reset"); const hash=await bcrypt.hash(password,12);
+ await prisma.$transaction(async tx=>{await tx.staff.update({where:{id},data:{passwordHash:hash}});await writeAudit(tx,`admin:${actor.id}`,"staff_password_reset","Staff",String(id));});revalidatePath("/staff/users");
+}
+
+export async function saveStaffRooms(form: FormData) {
+ const actor=await requireStaff(true), id=Number(form.get("staffId"));if(!Number.isSafeInteger(id)) throw new Error("Invalid staff account");
+ const chosen=form.getAll("room").map(String).map(v=>{const [classLevel,room]=v.split("|");return {classLevel,room};});
+ const known=await prisma.student.findMany({where:{house:"purple"},distinct:["classLevel","room"],select:{classLevel:true,room:true}});if(chosen.some(x=>!known.some(k=>k.classLevel===x.classLevel&&k.room===x.room))) throw new Error("Unknown room assignment");
+ await prisma.$transaction(async tx=>{await tx.staffRoom.deleteMany({where:{staffId:id}});if(chosen.length)await tx.staffRoom.createMany({data:chosen.map(r=>({staffId:id,...r}))});await writeAudit(tx,`admin:${actor.id}`,"staff_rooms_updated","Staff",String(id),{rooms:chosen});});revalidatePath("/staff/users");
+}
+
+export async function deleteStaff(form: FormData) {
+ const actor=await requireStaff(true), id=Number(form.get("staffId"));if(!Number.isSafeInteger(id)) throw new Error("Invalid staff account");
+ await prisma.$transaction(async tx=>{const target=await tx.staff.findUnique({where:{id},select:{role:true,username:true}});if(!target)throw new Error("Staff account not found");if(target.role==="admin"&&await tx.staff.count({where:{role:"admin"}})<=1)throw new Error("Cannot delete the last admin");await writeAudit(tx,`admin:${actor.id}`,"staff_deleted","Staff",String(id),{username:target.username});await tx.staff.delete({where:{id}});});revalidatePath("/staff/users");
 }
