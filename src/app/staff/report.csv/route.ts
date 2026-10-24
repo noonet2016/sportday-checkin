@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   const q = (x: unknown) => `"${String(x ?? "").replaceAll('"', '""')}"`;
   const rows: string[][] = [
-    ["รหัส", "ชื่อ", "ระดับ", "ห้อง", "เลขที่", "โครงการ", ...days.flatMap(d => d.slots.map(s => `${formatDateInput(d.date)} ${periodLabel(s.period)}`)), "รวม", "ร้อยละ", "สถานะ"]
+    ["เลขที่", "รหัส", "ชื่อ", "ระดับ", "ห้อง", "โครงการ", ...days.flatMap(d => d.slots.map(s => `${formatDateInput(d.date)} ${periodLabel(s.period)}`)), "รวม", "ร้อยละ", "สถานะ"]
   ];
   for (const s of students) {
     const slots = days.flatMap(d => d.slots);
@@ -43,11 +43,11 @@ export async function GET(request: NextRequest) {
     });
     const count = slots.filter(slot => map.has(`${s.id}:${slot.id}`)).length;
     rows.push([
+      s.number == null ? "" : String(s.number),
       s.studentCode,
       `${s.prefix ?? ""}${s.firstName} ${s.lastName}`,
       s.classLevel,
       s.room,
-      s.number == null ? "" : String(s.number),
       s.program ?? "",
       ...vals,
       `${count}/${slots.length}`,

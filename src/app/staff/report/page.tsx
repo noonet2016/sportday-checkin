@@ -50,9 +50,9 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
           <table className="w-full min-w-[72rem] text-left text-sm">
             <thead>
               <tr>
+                <th>เลขที่</th>
                 <th>นักเรียน</th>
                 <th>ห้อง</th>
-                <th>เลขที่</th>
                 {days.flatMap(d => d.slots.map(s => <th key={s.id}>{formatDateInput(d.date)} {periodLabel(s.period)}</th>))}
                 <th>รวม</th>
                 <th>ร้อยละ</th>
@@ -65,9 +65,9 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                 const passed = attendancePassed(done, allSlots.length);
                 return (
                   <tr key={s.id}>
+                    <td>{s.number ?? "—"}</td>
                     <td className="whitespace-nowrap">{s.studentCode} {s.prefix ?? ""}{s.firstName} {s.lastName}</td>
                     <td>{s.classLevel}/{s.room} {s.program}</td>
-                    <td>{s.number ?? "—"}</td>
                     {days.flatMap(d => d.slots.map(slot => {
                       const r = map.get(`${s.id}:${slot.id}`);
                       return <td key={slot.id}>{r ? roleLabel(r.role) : "—"}</td>;
