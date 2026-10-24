@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { formatDateInput } from "@/lib/time";
-import { allowedRooms } from "@/lib/staff-access";
+import { allowedRooms, roomFilter } from "@/lib/staff-access";
 import { studentNameFilter } from "@/lib/student-search";
 
 export async function GET(request: NextRequest) {
@@ -11,10 +11,11 @@ export async function GET(request: NextRequest) {
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
   const rooms = await allowedRooms(session);
   const search = request.nextUrl.searchParams.get("q") ?? undefined;
+  const picked = roomFilter(rooms, request.nextUrl.searchParams.get("room"));
   const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
 
   const students = await prisma.student.findMany({
-    where: { house: "purple", ...scope, ...studentNameFilter(search) },
+    where: { house: "purple", ...scope, ...(picked ?? {}), ...studentNameFilter(search) },
     select: { studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, number: true, program: true, id: true },
     orderBy: [{ classLevel: "asc" }, { room: "asc" }, { number: "asc" }]
   });
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": "attachment; filename*=UTF-8''sportday-report.csv",
+      "Content-Disposition": `attachment; filename*=UTF-8''sportday-report${picked ? `-${picked.classLevel}-${picked.room}` : ""}.csv`,
       "Cache-Control": "no-store"
     }
   });

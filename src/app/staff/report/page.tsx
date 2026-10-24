@@ -4,15 +4,18 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { formatDateInput } from "@/lib/time";
 import StaffNav from "../StaffNav";
-import { allowedRooms } from "@/lib/staff-access";
+import { allowedRooms, roomFilter } from "@/lib/staff-access";
 import { studentNameFilter } from "@/lib/student-search";
 export const dynamic = "force-dynamic";
-export default async function Report({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const session = await getSession("staff"); if (!session) redirect("/staff/login"); const rooms = await allowedRooms(session); const { q } = await searchParams; const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
+export default async function Report({ searchParams }: { searchParams: Promise<{ q?: string; room?: string }> }) {
+  const session = await getSession("staff"); if (!session) redirect("/staff/login"); const rooms = await allowedRooms(session); const { q, room: roomParam } = await searchParams; const picked = roomFilter(rooms, roomParam); const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
   const [students, days] = await Promise.all([
-    prisma.student.findMany({ where: { house: "purple", ...scope, ...studentNameFilter(q) }, select: { id: true, studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, number: true, program: true }, orderBy: [{ classLevel: "asc" }, { room: "asc" }, { number: "asc" }] }),
+    prisma.student.findMany({ where: { house: "purple", ...scope, ...(picked ?? {}), ...studentNameFilter(q) }, select: { id: true, studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, number: true, program: true }, orderBy: [{ classLevel: "asc" }, { room: "asc" }, { number: "asc" }] }),
     prisma.eventDay.findMany({ include: { slots: { select: { id: true, period: true }, orderBy: { period: "asc" } } }, orderBy: { date: "asc" } })
   ]);
+  const roomOptions = (await prisma.student.findMany({ where: { house: "purple", ...scope }, distinct: ["classLevel", "room"], select: { classLevel: true, room: true, program: true } })).sort(compareRooms);
+  const pickedKey = picked ? `${picked.classLevel}|${picked.room}` : "";
+  const csvQuery = new URLSearchParams({ ...(q ? { q } : {}), ...(pickedKey ? { room: pickedKey } : {}) }).toString();
   const ids = students.map(s => s.id);
   const records = ids.length ? await prisma.checkinRecord.findMany({ where: { studentId: { in: ids } }, select: { studentId: true, slotId: true, role: true } }) : [];
   const map = new Map(records.map(r => [`${r.studentId}:${r.slotId}`, r]));
@@ -28,10 +31,18 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
         <h1>รายงานการเช็กชื่อ</h1>
         <p>เกณฑ์ผ่าน: เข้าร่วมอย่างน้อย {Math.round(PASS_RATIO * 100)}% ({Math.ceil(PASS_RATIO * allSlots.length)}/{allSlots.length} ครั้ง) · ผ่าน <b className="text-emerald-700">{passedCount}</b> · ไม่ผ่าน <b className="text-red-700">{students.length - passedCount}</b> จาก {students.length} คน</p>
         <form>
+          {roomOptions.length > 1 && (
+            <label>ห้อง
+              <select name="room" defaultValue={pickedKey} className="rounded-xl border-2 border-violet-300 bg-white p-3 text-base text-slate-900">
+                <option value="">ทุกห้อง ({roomOptions.length} ห้อง)</option>
+                {roomOptions.map(r => <option key={`${r.classLevel}|${r.room}`} value={`${r.classLevel}|${r.room}`}>{r.classLevel}/{r.room}{r.program ? ` (${r.program})` : ""}</option>)}
+              </select>
+            </label>
+          )}
           <label>ค้นหานักเรียน<input name="q" type="search" defaultValue={q ?? ""} placeholder="ชื่อ นามสกุล หรือเลขประจำตัว" /></label>
-          <button className="primary">ค้นหา</button>
-          {q && <a className="secondary" href="/staff/report">ล้างการค้นหา</a>}
-          <a className="secondary" href={`/staff/report.csv${q ? `?q=${encodeURIComponent(q)}` : ""}`}>ดาวน์โหลด CSV</a>
+          <button className="primary">แสดงผล</button>
+          {(q || pickedKey) && <a className="secondary" href="/staff/report">ล้างตัวกรอง</a>}
+          <a className="secondary" href={`/staff/report.csv${csvQuery ? `?${csvQuery}` : ""}`}>ดาวน์โหลด CSV</a>
         </form>
         <div className="overflow-x-auto">
           <table className="w-full text-left">

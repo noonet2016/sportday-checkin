@@ -14,3 +14,9 @@ export async function allowedRooms(session: NonNullable<Session>): Promise<RoomK
 export function roomAllowed(rooms: RoomKey[], classLevel: string, room: string): boolean {
   return rooms.some((item) => item.classLevel === classLevel && item.room === room);
 }
+
+/** Parse a "level|room" filter value; ignored unless it is one of the caller's allowed rooms, so it can only narrow scope. */
+export function roomFilter(rooms: RoomKey[], value: string | null | undefined): RoomKey | null {
+  const [classLevel, room] = (value ?? "").split("|");
+  return classLevel && room && roomAllowed(rooms, classLevel, room) ? { classLevel, room } : null;
+}
