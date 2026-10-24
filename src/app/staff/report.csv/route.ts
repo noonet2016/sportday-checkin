@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
   const rooms = await allowedRooms(session);
   const search = request.nextUrl.searchParams.get("q") ?? undefined;
   const picked = roomFilter(rooms, request.nextUrl.searchParams.get("room"));
+  const statusParam = request.nextUrl.searchParams.get("status");
+  const status = statusParam === "pass" || statusParam === "fail" ? statusParam : null;
   const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
 
   const students = await prisma.student.findMany({
@@ -42,6 +44,7 @@ export async function GET(request: NextRequest) {
       return r ? roleCsvLabel(r.role) : "—";
     });
     const count = slots.filter(slot => map.has(`${s.id}:${slot.id}`)).length;
+    if (status && attendancePassed(count, slots.length) !== (status === "pass")) continue;
     rows.push([
       s.number == null ? "" : String(s.number),
       s.studentCode,
@@ -59,7 +62,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename*=UTF-8''sportday-report${picked ? `-${picked.classLevel}-${picked.room}` : ""}.csv`,
+      "Content-Disposition": `attachment; filename*=UTF-8''sportday-report${picked ? `-${picked.classLevel}-${picked.room}` : ""}${status ? `-${status}` : ""}.csv`,
       "Cache-Control": "no-store"
     }
   });

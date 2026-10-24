@@ -18,7 +18,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
   ]);
   const roomOptions = (await prisma.student.findMany({ where: { house: "purple", ...scope }, distinct: ["classLevel", "room"], select: { classLevel: true, room: true, program: true } })).sort(compareRooms);
   const pickedKey = picked ? `${picked.classLevel}|${picked.room}` : "";
-  const csvQuery = new URLSearchParams({ ...(q ? { q } : {}), ...(pickedKey ? { room: pickedKey } : {}) }).toString();
+  const csvQuery = new URLSearchParams({ ...(q ? { q } : {}), ...(pickedKey ? { room: pickedKey } : {}), ...(status ? { status } : {}) }).toString();
   const ids = students.map(s => s.id);
   const records = ids.length ? await prisma.checkinRecord.findMany({ where: { studentId: { in: ids } }, select: { studentId: true, slotId: true, role: true } }) : [];
   const map = new Map(records.map(r => [`${r.studentId}:${r.slotId}`, r]));
