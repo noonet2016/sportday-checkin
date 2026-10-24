@@ -117,3 +117,36 @@ export async function unlinkStudentLine(form: FormData) {
   });
   revalidatePath("/staff/line");
 }
+
+export type SlotTimesResult = { ok: boolean; message: string } | null;
+/** Admin edits check-in windows per day and round. Times are Bangkok wall-clock "HH:MM"; existing records are untouched. */
+export async function updateSlotTimes(_prev: SlotTimesResult, form: FormData): Promise<SlotTimesResult> {
+  const actor = await requireStaff(true);
+  const slots = await prisma.checkinSlot.findMany({ select: { id: true, period: true, opensAt: true, closesAt: true, eventDayId: true, eventDay: { select: { date: true } } } });
+  const hm = (v: FormDataEntryValue | null) => { const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(v ?? "")); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+  const at = (day: Date, minutes: number) => new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), Math.floor(minutes / 60), minutes % 60));
+  const label = (s: (typeof slots)[number]) => `${s.eventDay.date.getUTCDate()}/${s.eventDay.date.getUTCMonth() + 1} รอบ${s.period === "morning" ? "เช้า" : "บ่าย"}`;
+  const next = new Map<number, { opensAt: Date; closesAt: Date }>();
+  for (const s of slots) {
+    const open = hm(form.get(`open_${s.id}`)), close = hm(form.get(`close_${s.id}`));
+    if (open === null || close === null) return { ok: false, message: `${label(s)}: กรอกเวลาให้ครบในรูปแบบ ชั่วโมง:นาที` };
+    if (open >= close) return { ok: false, message: `${label(s)}: เวลาเปิดต้องก่อนเวลาปิด` };
+    next.set(s.id, { opensAt: at(s.eventDay.date, open), closesAt: at(s.eventDay.date, close) });
+  }
+  for (const s of slots.filter(x => x.period === "morning")) {
+    const pm = slots.find(x => x.eventDayId === s.eventDayId && x.period === "afternoon");
+    if (pm && next.get(s.id)!.closesAt > next.get(pm.id)!.opensAt) return { ok: false, message: `${label(s)}: รอบเช้าต้องปิดก่อนรอบบ่ายเปิด` };
+  }
+  const changed = slots.filter(s => next.get(s.id)!.opensAt.getTime() !== s.opensAt.getTime() || next.get(s.id)!.closesAt.getTime() !== s.closesAt.getTime());
+  if (!changed.length) return { ok: true, message: "ไม่มีการเปลี่ยนแปลง" };
+  const iso = (d: Date) => d.toISOString().slice(11, 16);
+  await prisma.$transaction(async tx => {
+    for (const s of changed) {
+      const n = next.get(s.id)!;
+      await tx.checkinSlot.update({ where: { id: s.id }, data: n });
+      await writeAudit(tx, `admin:${actor.id}`, "slot_times_updated", "CheckinSlot", String(s.id), { before: `${iso(s.opensAt)}-${iso(s.closesAt)}`, after: `${iso(n.opensAt)}-${iso(n.closesAt)}` });
+    }
+  });
+  revalidatePath("/staff"); revalidatePath("/staff/settings");
+  return { ok: true, message: `บันทึกแล้ว ${changed.length} รอบ: ${changed.map(label).join(", ")}` };
+}
