@@ -16,9 +16,9 @@ LINE LIFF check-in app for the school sports week (กีฬาสี): **purple
 - [ ] Deployed on Plesk (new subdomain) and pilot-tested on campus **by Sun 25 Oct**.
 
 ## Milestones
-- [ ] M1 (Fri 23): Scaffold — Next.js/Prisma stack copied from lineup-nextjs, new schema, shared libs ported, builds clean, no DB yet.
-- [ ] M2 (Sat 24): Student flow — LIFF login, bind, slot check-in with GPS + spoof flag, own history.
-- [ ] M3 (Sun 25 AM): Staff — login, live dashboard, manual record, report/CSV, admin settings (days/slots/geofence), roster import.
+- [x] M1 (Fri 23): Scaffold — Next.js/Prisma stack copied from lineup-nextjs, new schema, shared libs ported, builds clean, no DB yet.
+- [x] M2 (Sat 24): Student flow — LIFF login, bind, slot check-in with GPS + spoof flag, own history.
+- [x] M3 (done Sat 24 07:35 — commits dfaa34e, 74b627c; DB smoke 15/15 PASS on local sportday_dev): Staff — login, live dashboard, manual record, report/CSV, admin settings (days/slots/geofence), roster import.
 - [ ] M4 (Sun 25 PM): Deploy to Plesk + on-campus pilot with 3–5 students.
 - [ ] M5 (Mon 26–Fri 30): Live; on-call fixes.
 
@@ -34,9 +34,12 @@ LINE LIFF check-in app for the school sports week (กีฬาสี): **purple
   - Q5 who can access the dashboard (how many purple-house staff)?
   - Q6 what the result is used for (activity hours? pass/fail?) — shapes the report.
 - LINE: reuse the `tnw-lineup` provider so existing lineup userIds match (needs a new LIFF app/endpoint on that channel — Trainer action in LINE Developers Console).
-- DB: new database on Plesk + local dev DB — not created yet.
+- DB: local dev `sportday_dev` (Homebrew MariaDB) ✅ populated 2026-10-24. Prod DB + subdomain on Plesk — not created yet.
+- Real campus geofence (center + radius) — not set yet (smoke used fixture coords).
 
 ## Decisions
+- 2026-10-24: Teio hit Codex limit (until 22 Nov) → Tomi took M3; Trainer: if Tomi hits limit, Khumsap continues without re-asking.
+- 2026-10-24: clear-flag and delete are admin-only; staff on-behalf after a student self-checked = rejected (Tomi).
 - 2026-10-23: Event dates confirmed **26–30 Oct 2569** (Trainer first said พ.ย. — corrected).
 - 2026-10-23: Slot windows **08:00–10:00** and **13:00–14:00** (Trainer).
 - 2026-10-23: New standalone project (not a feature inside lineup-nextjs); lineup-nextjs is the pattern source, never edited.
