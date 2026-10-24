@@ -85,7 +85,7 @@ export default async function Room({
           </Link>
         </div>
         <div className="grid gap-1.5">
-          <p className="text-sm font-semibold text-slate-800">เลือกวันและรอบ</p>
+          <p className="text-sm font-semibold text-slate-800">เลือกวันและรอบ <span className="font-normal text-slate-500">(🔒 = ยังไม่ถึงเวลา)</span></p>
           {slotDays.map(([dateKey, daySlots]) => (
             <div key={dateKey} className="flex flex-wrap items-center gap-2">
               <span className="w-24 text-sm text-slate-700">{thaiDayLabel(daySlots[0].eventDay.date)}</span>
@@ -95,7 +95,7 @@ export default async function Room({
                 return (
                   <Link key={x.id} href={`${roomBase}?day=${dateKey}&period=${x.period}`}
                     className={`rounded-lg px-3 py-1.5 text-sm font-semibold no-underline ${active ? "bg-violet-700 text-white" : started ? "border border-violet-300 bg-white text-violet-800" : "border border-slate-200 bg-slate-50 text-slate-500"}`}>
-                    {periodLabel(x.period)}{started ? "" : " (ยังไม่ถึง)"}
+                    {started ? "" : "🔒 "}{periodLabel(x.period)}
                   </Link>
                 );
               })}
