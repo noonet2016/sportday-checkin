@@ -4,7 +4,7 @@ import StaffNav from "../../../StaffNav";
 import SlotBar from "../../../ui/SlotBar";
 import RecordEditor from "../../../RecordEditor";
 import SheetTrigger from "../../../ui/SheetTrigger";
-import { ExternalLink, MapPin, PencilLine, TriangleAlert } from "lucide-react";
+import { ExternalLink, Lock, MapPin, PencilLine, TriangleAlert } from "lucide-react";
 import RoomFilters from "../../RoomFilters";
 import RoleSportFields from "../../../RoleSportFields";
 import ChoiceWithOther from "@/app/_components/ChoiceWithOther";
@@ -14,7 +14,7 @@ import { formatDistance } from "@/lib/geo";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { parseDateInput, formatWallClockTime, formatDateInput, formatThaiDate, nowInBangkok } from "@/lib/time";
+import { parseDateInput, formatWallClockTime, formatDateInput, formatThaiDate, formatThaiDateFull, nowInBangkok } from "@/lib/time";
 import { manualRecord, clearFlag } from "@/app/staff/actions";
 import { allowedRooms, roomAllowed } from "@/lib/staff-access";
 
@@ -141,6 +141,15 @@ export default async function Room({
                         <button className="min-h-11 rounded-xl bg-violet-700 px-4 font-semibold text-white hover:bg-violet-800">บันทึกแทน</button>
                       </form>
                     ))}
+                        </div>
+                      </SheetTrigger>
+                    )}
+                    {!r && slot && pick.length === 0 && (
+                      <SheetTrigger className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-violet-300 bg-white px-4 text-sm font-semibold text-violet-800 hover:bg-violet-50" label={<><Lock aria-hidden="true" size={15} />บันทึกแทน</>} title={`เลขที่ ${s.number ?? "—"} · ${s.prefix ?? ""}${s.firstName} ${s.lastName}`} subtitle={`${formatThaiDateFull(slot.opensAt)} รอบ${periodLabel(slot.period)}`}>
+                        <div className="grid justify-items-center gap-2 rounded-xl bg-slate-100 p-5 text-center">
+                          <Lock aria-hidden="true" size={28} className="text-slate-500" />
+                          <p className="font-semibold text-slate-800">ยังไม่ถึงเวลารอบนี้</p>
+                          <p className="text-sm text-slate-600">บันทึกแทนได้ตั้งแต่ {formatWallClockTime(slot.opensAt)} ของวันนั้น</p>
                         </div>
                       </SheetTrigger>
                     )}
