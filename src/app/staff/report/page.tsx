@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { formatThaiDate } from "@/lib/time";
 import StaffNav from "../StaffNav";
+import ProgressBar from "../ui/ProgressBar";
 import { allowedRooms, roomFilter } from "@/lib/staff-access";
 import { studentNameFilter } from "@/lib/student-search";
 export const dynamic = "force-dynamic";
@@ -114,12 +115,38 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
           </table>
         </div>
         {pager}
-        <h2>สรุปรายวัน{paginate ? " (ทุกห้อง)" : ""}</h2>
-        {days.map(d => (
-          <p key={d.id}>
-            {formatThaiDate(d.date, { year: true })}: {d.slots.map(slot => `${periodLabel(slot.period)} ${records.filter(r => r.slotId === slot.id).length}/${students.length}`).join(" · ")}
-          </p>
-        ))}
+        <section className="grid gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-base font-bold text-slate-900">สรุปรายวัน</h2>
+            {paginate && <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-800">ทุกห้อง</span>}
+            <span className="text-xs text-slate-500">จำนวนนักเรียนที่เช็กชื่อแต่ละรอบ จากทั้งหมด {students.length} คน</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {days.map(d => (
+              <article key={d.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                <h3 className="border-b border-slate-200 pb-2 text-center font-bold text-slate-900">{formatThaiDate(d.date)} {String(d.date.getUTCFullYear() + 543).slice(-2)}</h3>
+                <div className="mt-2 grid gap-3">
+                  {d.slots.map(slot => {
+                    const n = records.filter(r => r.slotId === slot.id).length;
+                    const pct = students.length ? Math.round(n * 100 / students.length) : 0;
+                    return (
+                      <div key={slot.id} className="grid gap-1.5">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-sm font-semibold text-slate-700">{periodLabel(slot.period)}</span>
+                          <span className="tabular-nums text-sm text-slate-600"><b className="text-base text-slate-900">{n}</b>/{students.length}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1"><ProgressBar value={pct} tone={pct >= PASS_RATIO * 100 ? "emerald" : "amber"} label={`${periodLabel(slot.period)} ${pct}%`} /></div>
+                          <span className={`w-11 text-right text-xs font-bold tabular-nums ${n === 0 ? "text-slate-400" : pct >= PASS_RATIO * 100 ? "text-emerald-700" : "text-amber-700"}`}>{n === 0 ? "—" : `${pct}%`}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       </section>
     </main>
   );
