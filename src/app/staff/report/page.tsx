@@ -2,7 +2,7 @@ import { attendancePassed, attendancePercent, compareRooms, compareStudents, PAS
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { formatThaiDate } from "@/lib/time";
+import { formatThaiDateFull } from "@/lib/time";
 import StaffNav from "../StaffNav";
 import ProgressBar from "../ui/ProgressBar";
 import { allowedRooms, roomFilter } from "@/lib/staff-access";
@@ -78,12 +78,12 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
         </div>
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[72rem] border-collapse text-left text-sm">
-            <thead className="bg-slate-50 text-slate-800 [&_th]:border [&_th]:border-slate-300 [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-center [&_th]:align-middle">
+            <thead className="bg-slate-50 text-slate-800 [&_th]:border [&_th]:border-slate-300 [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-center [&_th]:align-middle [&_th]:whitespace-nowrap">
               <tr>
                 <th rowSpan={2}>เลขที่</th>
                 <th rowSpan={2}>นักเรียน</th>
                 <th rowSpan={2}>ห้อง</th>
-                {days.map(d => <th key={d.date.toISOString()} colSpan={d.slots.length} className="whitespace-nowrap text-center font-bold">{formatThaiDate(d.date)} {String(d.date.getUTCFullYear() + 543).slice(-2)}</th>)}
+                {days.map(d => <th key={d.date.toISOString()} colSpan={d.slots.length} className="!whitespace-normal text-center font-bold leading-snug">{formatThaiDateFull(d.date)}</th>)}
                 <th rowSpan={2}>รวม</th>
                 <th rowSpan={2}>ร้อยละ</th>
                 <th rowSpan={2}>สถานะ</th>
@@ -124,7 +124,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {days.map(d => (
               <article key={d.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                <h3 className="border-b border-slate-200 pb-2 text-center font-bold text-slate-900">{formatThaiDate(d.date)} {String(d.date.getUTCFullYear() + 543).slice(-2)}</h3>
+                <h3 className="border-b border-slate-200 pb-2 text-center font-bold text-slate-900">{formatThaiDateFull(d.date)}</h3>
                 <div className="mt-2 grid gap-3">
                   {d.slots.map(slot => {
                     const n = records.filter(r => r.slotId === slot.id).length;

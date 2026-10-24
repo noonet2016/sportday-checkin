@@ -129,3 +129,10 @@ export function formatThaiDate(date: Date, { weekday = true, year = false }: { w
   const day = `${date.getUTCDate()} ${THAI_MONTHS[date.getUTCMonth()]}${year ? ` ${date.getUTCFullYear() + 543}` : ""}`;
   return weekday ? `${THAI_WEEKDAYS[date.getUTCDay()]} ${day}` : day;
 }
+
+const THAI_WEEKDAYS_FULL = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+const THAI_MONTHS_FULL = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+/** Same day as formatThaiDate, spelled out: "จันทร์ 26 ตุลาคม 2569". */
+export function formatThaiDateFull(date: Date): string {
+  return `${THAI_WEEKDAYS_FULL[date.getUTCDay()]} ${date.getUTCDate()} ${THAI_MONTHS_FULL[date.getUTCMonth()]} ${date.getUTCFullYear() + 543}`;
+}
