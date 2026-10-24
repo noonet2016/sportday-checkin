@@ -7,8 +7,8 @@ import StaffNav from "../StaffNav";
 import { allowedRooms, roomFilter } from "@/lib/staff-access";
 import { studentNameFilter } from "@/lib/student-search";
 export const dynamic = "force-dynamic";
-export default async function Report({ searchParams }: { searchParams: Promise<{ q?: string; room?: string }> }) {
-  const session = await getSession("staff"); if (!session) redirect("/staff/login"); const rooms = await allowedRooms(session); const { q, room: roomParam } = await searchParams; const picked = roomFilter(rooms, roomParam); const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
+export default async function Report({ searchParams }: { searchParams: Promise<{ q?: string; room?: string; page?: string }> }) {
+  const session = await getSession("staff"); if (!session) redirect("/staff/login"); const rooms = await allowedRooms(session); const { q, room: roomParam, page: pageParam } = await searchParams; const picked = roomFilter(rooms, roomParam); const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
   const [students, days] = await Promise.all([
     prisma.student.findMany({ where: { house: "purple", ...scope, ...(picked ?? {}), ...studentNameFilter(q) }, select: { id: true, studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, number: true, program: true }, orderBy: [{ classLevel: "asc" }, { room: "asc" }, { number: "asc" }] }),
     prisma.eventDay.findMany({ include: { slots: { select: { id: true, period: true }, orderBy: { period: "asc" } } }, orderBy: { date: "asc" } })
@@ -24,12 +24,33 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
   const allSlots = days.flatMap(d => d.slots);
   const attendedOf = (studentId: number) => allSlots.filter(slot => map.has(`${studentId}:${slot.id}`)).length;
   const passedCount = students.filter(s => attendancePassed(attendedOf(s.id), allSlots.length)).length;
+  // "ทุกห้อง" without a name search: one room per page (Trainer, 2026-10-24); a search or a picked room shows everything matched.
+  const paginate = !picked && !q && roomOptions.length > 1;
+  const pageIndex = Math.min(Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1), roomOptions.length) - 1;
+  const pageRoom = paginate ? roomOptions[pageIndex] : null;
+  const shown = pageRoom ? students.filter(s => s.classLevel === pageRoom.classLevel && s.room === pageRoom.room) : students;
+  const shownPassed = shown.filter(s => attendancePassed(attendedOf(s.id), allSlots.length)).length;
+  const pageHref = (i: number) => `/staff/report?page=${i + 1}`;
+  const pager = pageRoom && (
+    <nav aria-label="เลือกห้อง" className="grid gap-2">
+      <div className="flex items-center justify-between gap-2">
+        {pageIndex > 0 ? <a className="secondary whitespace-nowrap" href={pageHref(pageIndex - 1)}>‹ ก่อนหน้า</a> : <span />}
+        <b className="text-center">ห้อง {pageRoom.classLevel}/{pageRoom.room}{pageRoom.program ? ` (${pageRoom.program})` : ""} · หน้า {pageIndex + 1}/{roomOptions.length}</b>
+        {pageIndex < roomOptions.length - 1 ? <a className="secondary whitespace-nowrap" href={pageHref(pageIndex + 1)}>ถัดไป ›</a> : <span />}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {roomOptions.map((r, i) => (
+          <a key={`${r.classLevel}|${r.room}`} href={pageHref(i)} className={`rounded-lg px-2.5 py-1 text-sm font-semibold no-underline ${i === pageIndex ? "bg-violet-700 text-white" : "border border-violet-300 bg-white text-violet-800"}`}>{r.classLevel}/{r.room}</a>
+        ))}
+      </div>
+    </nav>
+  );
   return (
     <main className="screen" style={{ maxWidth: "90rem", alignContent: "start" }}>
       <StaffNav active="report" />
       <section className="card">
         <h1>รายงานการเช็กชื่อ</h1>
-        <p>เกณฑ์ผ่าน: เข้าร่วมอย่างน้อย {Math.round(PASS_RATIO * 100)}% ({Math.ceil(PASS_RATIO * allSlots.length)}/{allSlots.length} ครั้ง) · ผ่าน <b className="text-emerald-700">{passedCount}</b> · ไม่ผ่าน <b className="text-red-700">{students.length - passedCount}</b> จาก {students.length} คน</p>
+        <p>เกณฑ์ผ่าน: เข้าร่วมอย่างน้อย {Math.round(PASS_RATIO * 100)}% ({Math.ceil(PASS_RATIO * allSlots.length)}/{allSlots.length} ครั้ง){paginate ? " · รวมทุกห้อง: " : " · "}ผ่าน <b className="text-emerald-700">{passedCount}</b> · ไม่ผ่าน <b className="text-red-700">{students.length - passedCount}</b> จาก {students.length} คน</p>
         <form>
           {roomOptions.length > 1 && (
             <label>ห้อง
@@ -46,6 +67,8 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
             <a className="secondary whitespace-nowrap" href={`/staff/report.csv${csvQuery ? `?${csvQuery}` : ""}`}>ดาวน์โหลด CSV</a>
           </div>
         </form>
+        {pager}
+        {pageRoom && <p>ห้องนี้: ผ่าน <b className="text-emerald-700">{shownPassed}</b> · ไม่ผ่าน <b className="text-red-700">{shown.length - shownPassed}</b> จาก {shown.length} คน</p>}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[72rem] text-left text-sm">
             <thead>
@@ -60,7 +83,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
               </tr>
             </thead>
             <tbody>
-              {students.map(s => {
+              {shown.map(s => {
                 const done = attendedOf(s.id);
                 const passed = attendancePassed(done, allSlots.length);
                 return (
@@ -81,7 +104,8 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
             </tbody>
           </table>
         </div>
-        <h2>สรุปรายวัน</h2>
+        {pager}
+        <h2>สรุปรายวัน{paginate ? " (ทุกห้อง)" : ""}</h2>
         {days.map(d => (
           <p key={d.id}>
             {formatThaiDate(d.date, { year: true })}: {d.slots.map(slot => `${periodLabel(slot.period)} ${records.filter(r => r.slotId === slot.id).length}/${students.length}`).join(" · ")}
