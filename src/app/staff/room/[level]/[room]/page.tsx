@@ -4,7 +4,7 @@ import StaffNav from "../../../StaffNav";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { parseDateInput, formatWallClockTime } from "@/lib/time";
+import { parseDateInput, formatWallClockTime, formatDateInput } from "@/lib/time";
 import { manualRecord, clearFlag, deleteRecord } from "@/app/staff/actions";
 import { allowedRooms, roomAllowed } from "@/lib/staff-access";
 
@@ -42,6 +42,9 @@ export default async function Room({
   }) : [];
 
   const map = new Map(records.map(r => [r.studentId, r]));
+  // Not-yet-checked students first so the on-behalf forms are at the top; Array.sort is stable, so number order is kept within each group.
+  students.sort((x, y) => Number(map.has(x.id)) - Number(map.has(y.id)));
+  const missingCount = students.filter(s => !map.has(s.id)).length;
   // On-behalf targets only the slot being viewed; the status shown on this page is for that slot.
   const pick = await prisma.checkinSlot.findMany({
     where: { id: slot?.id ?? -1 },
@@ -58,6 +61,7 @@ export default async function Room({
             ← กลับ
           </Link>
         </div>
+        {slot && <p className="text-sm text-slate-700">{formatDateInput(slot.opensAt)} รอบ{periodLabel(slot.period)} · ยังไม่เช็ค <b className="text-red-700">{missingCount}</b> คน{missingCount > 0 ? " — แสดงไว้ด้านบนพร้อมฟอร์มบันทึกแทน" : ""}</p>}
 
         {/* Mobile (<640px): one card per student */}
         <div className="space-y-3 sm:hidden">
