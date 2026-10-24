@@ -4,6 +4,7 @@ import StaffNav from "../../../StaffNav";
 import RecordEditor from "../../../RecordEditor";
 import RoleSportFields from "../../../RoleSportFields";
 import { distanceFromCentre, getGeofence } from "@/lib/geofence";
+import { formatDistance } from "@/lib/geo";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -49,7 +50,7 @@ export default async function Room({
   const distanceText = (r: { source: string; lat: number; lng: number }) => {
     if (!fence || r.source !== "self") return null;
     const d = distanceFromCentre(fence, r.lat, r.lng);
-    return `${d > fence.radius ? "⚠️ นอกรัศมี" : "ในรัศมี"} ~${d} ม. (กำหนด ${fence.radius} ม.)`;
+    return `${d > fence.radius ? "⚠️ นอกรัศมี" : "ในรัศมี"} ~${formatDistance(d)} (กำหนด ${formatDistance(fence.radius)})`;
   };
   // Not-yet-checked students first so the on-behalf forms are at the top; Array.sort is stable, so number order is kept within each group.
   students.sort((x, y) => Number(map.has(x.id)) - Number(map.has(y.id)));

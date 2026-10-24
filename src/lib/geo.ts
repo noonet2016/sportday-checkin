@@ -19,3 +19,11 @@ export function maxPairwiseDistance(samples: { lat: number; lng: number }[]): nu
   }
   return maxDistance;
 }
+
+/** Thai distance label: metres below 1 km ("650 ม."), kilometres from 1 km ("1.2 กม.", "520 กม."). */
+export function formatDistance(metres: number): string {
+  const m = Math.round(metres);
+  if (m < 1000) return `${m} ม.`;
+  const km = m / 1000;
+  return `${km < 10 ? km.toFixed(1).replace(/\.0$/, "") : Math.round(km).toLocaleString("th-TH")} กม.`;
+}

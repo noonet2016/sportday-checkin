@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { attendancePassed, attendancePercent, EVENT_DATES, resolveSlotWindow } from "../src/lib/event";
-import { haversineDistance } from "../src/lib/geo";
+import { formatDistance, haversineDistance } from "../src/lib/geo";
 import { scoreSuspicion, type CheckinGpsSample } from "../src/lib/spoof";
 
 const at = (iso: string) => new Date(iso);
@@ -78,4 +78,14 @@ test("attendancePercent rounds to whole percent", () => {
   assert.equal(attendancePercent(7, 10), 70);
   assert.equal(attendancePercent(2, 3), 67);
   assert.equal(attendancePercent(0, 0), 0);
+});
+
+test("formatDistance switches to kilometres from 1 km", () => {
+  assert.equal(formatDistance(67), "67 ม.");
+  assert.equal(formatDistance(999.4), "999 ม.");
+  assert.equal(formatDistance(1000), "1 กม.");
+  assert.equal(formatDistance(1234), "1.2 กม.");
+  assert.equal(formatDistance(9960), "10 กม.");
+  assert.equal(formatDistance(523456), "523 กม.");
+  assert.equal(formatDistance(1523456), "1,523 กม.");
 });

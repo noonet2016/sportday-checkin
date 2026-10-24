@@ -3,6 +3,7 @@ import { resolveSlotWindow } from "@/lib/event";
 import { scoreSuspicion, type CheckinGpsSample } from "@/lib/spoof";
 import { writeAudit } from "@/lib/audit";
 import { distanceFromCentre, getGeofence } from "@/lib/geofence";
+import { formatDistance } from "@/lib/geo";
 import type { RoomKey } from "@/lib/staff-access";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -32,7 +33,7 @@ export async function performCheckin(input: { studentId: number; now: CheckinNow
   if (!fence) return { ok: false, message: "ยังไม่ได้ตั้งค่าพื้นที่โรงเรียน กรุณาติดต่อเจ้าหน้าที่" };
   const { lat, lng, radius } = fence;
   const distanceM = distanceFromCentre(fence, input.lat, input.lng);
-  if (distanceM > radius) return { ok: false, message: `คุณไม่ได้อยู่ในรัศมีที่กำหนด อยู่ห่างจากจุดเช็คชื่อประมาณ ${distanceM} เมตร (กำหนดรัศมี ${radius} เมตร) กรุณาเข้ามาในบริเวณโรงเรียนแล้วลองใหม่`, distanceM, radiusM: radius };
+  if (distanceM > radius) return { ok: false, message: `คุณไม่ได้อยู่ในรัศมีที่กำหนด อยู่ห่างจากจุดเช็คชื่อประมาณ ${formatDistance(distanceM)} (กำหนดรัศมี ${formatDistance(radius)}) กรุณาเข้ามาในบริเวณโรงเรียนแล้วลองใหม่`, distanceM, radiusM: radius };
   const suspicion = scoreSuspicion(input.samples, input.lat, input.lng, { name: "campus", lat, lng });
   try {
     await prisma.$transaction(async (tx) => {
