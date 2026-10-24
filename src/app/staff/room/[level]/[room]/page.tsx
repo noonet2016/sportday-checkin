@@ -81,7 +81,7 @@ export default async function Room({
     <main className="screen pb-24 md:pb-6" style={{ maxWidth: "76rem", alignContent: "start" }}>
       <StaffNav active="home" />
       <SlotBar day={date ? formatDateInput(date) : ""} period={period === "afternoon" ? "afternoon" : "morning"} updatedAt={formatWallClockTime(nowWall)} hrefBase={roomBase}/>
-      <section className="card rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+      <section className="grid gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-xl font-bold text-slate-950">{level}/{room} · {students[0]?.program ?? "ทั่วไป"}</h1>
           <Link className="min-h-11 inline-flex items-center font-semibold text-violet-800" href={`/staff${day ? `?day=${encodeURIComponent(day)}&period=${period === "afternoon" ? "afternoon" : "morning"}` : ""}`}>
@@ -98,12 +98,11 @@ export default async function Room({
           {students.map((s) => {
             const r = map.get(s.id);
             return (
-              <article key={s.id} data-student-status={r ? r.isSuspicious ? "flagged" : "checked" : "missing"} hidden={Boolean(slot && viewedStarted && !viewedIsPast && r && !r.isSuspicious)} className="flex min-h-16 flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-bold text-slate-900 break-words">
-                    <span className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-sm text-slate-700">{s.number ?? "—"}</span>
-                    <span className="font-mono text-sm text-slate-500 mr-2">รหัส {s.studentCode}</span>
-                    {s.prefix ?? ""}{s.firstName} {s.lastName}
+              <article key={s.id} data-student-status={r ? r.isSuspicious ? "flagged" : "checked" : "missing"} hidden={Boolean(slot && viewedStarted && !viewedIsPast && r && !r.isSuspicious)} className="grid min-h-16 gap-2 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-1 items-start gap-2 font-bold text-slate-900">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm tabular-nums text-slate-700">{s.number ?? "—"}</span>
+                    <span className="min-w-0 break-words">{s.prefix ?? ""}{s.firstName} {s.lastName}<span className="ml-2 font-mono text-xs font-normal text-slate-500">รหัส {s.studentCode}</span></span>
                   </div>
                   <div>
                     {r ? (
@@ -120,10 +119,7 @@ export default async function Room({
                   </div>
                 </div>
 
-                <div className="text-sm text-slate-700">
-                  <span className="text-slate-500">เวลา: </span>
-                  <span className="font-medium text-slate-900">{r ? formatWallClockTime(r.checkedInAt, true) : "—"}</span>
-                </div>
+                {r && <div className="text-xs font-medium tabular-nums text-slate-600">เวลา {formatWallClockTime(r.checkedInAt, true)}</div>}
 
                 {isAdmin && r?.suspicionReasons && (
                   <div className="rounded-lg bg-amber-50 p-2 text-xs text-amber-900 break-words">

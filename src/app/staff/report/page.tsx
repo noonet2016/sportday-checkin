@@ -48,7 +48,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
   return (
     <main className="screen" style={{ maxWidth: "90rem", alignContent: "start" }}>
       <StaffNav active="report" />
-      <section className="card gap-4 border-slate-200 p-3 sm:p-4">
+      <section className="grid gap-4">
         <header className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-xl font-bold">รายงานการเช็กชื่อ</h1><a className="secondary min-h-11 border border-slate-300 bg-white text-slate-800 no-underline" href={`/staff/report.csv${csvQuery ? `?${csvQuery}` : ""}`}>ดาวน์โหลด CSV</a></header>
         <p>เกณฑ์ผ่าน: เข้าร่วมอย่างน้อย {Math.round(PASS_RATIO * 100)}% ({Math.ceil(PASS_RATIO * allSlots.length)}/{allSlots.length} ครั้ง){paginate ? " · รวมทุกห้อง: " : " · "}ผ่าน <b className="text-emerald-700">{passedCount}</b> · ไม่ผ่าน <b className="text-red-700">{students.length - passedCount}</b> จาก {students.length} คน</p>
         <form className="grid gap-3 md:flex md:flex-wrap md:items-end">
