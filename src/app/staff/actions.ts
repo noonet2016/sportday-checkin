@@ -71,10 +71,12 @@ export async function deleteRecord(form: FormData) {
   await deleteCheckinRecord({ staffId: Number(actor.id), role: actor.role, recordId: id, reason: String(form.get("reason") ?? "") }); revalidatePath("/staff"); revalidatePath("/staff/report");
 }
 
-export async function saveSettings(form: FormData) {
+export type SaveResult = { ok: boolean; message: string } | null;
+export async function saveSettings(_prev: SaveResult, form: FormData): Promise<SaveResult> {
   const actor = await requireStaff(true); const lat = Number(form.get("lat")); const lng = Number(form.get("lng")); const radius = Number(form.get("radius"));
-  if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180 || !Number.isInteger(radius) || radius < 10 || radius > 10000) throw new Error("ข้อมูลตำแหน่งและรัศมีไม่ถูกต้อง");
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180 || !Number.isInteger(radius) || radius < 10 || radius > 10000) return { ok: false, message: "ข้อมูลตำแหน่งหรือรัศมีไม่ถูกต้อง — รัศมีต้องเป็นจำนวนเต็ม 10–10,000 เมตร" };
   await prisma.$transaction(async tx => { for (const [key, value] of [["geofence_lat", lat], ["geofence_lng", lng], ["geofence_radius_m", radius]] as const) await tx.systemSetting.upsert({ where: { key }, update: { value: String(value) }, create: { key, value: String(value) } }); await writeAudit(tx, `admin:${actor.id}`, "geofence_updated", "SystemSetting", "geofence", { lat, lng, radius }); }); revalidatePath("/staff/settings");
+  return { ok: true, message: `บันทึกแล้ว: รัศมี ${radius.toLocaleString("th-TH")} เมตร · พิกัด ${lat.toFixed(6)}, ${lng.toFixed(6)}` };
 }
 
 export async function createStaff(form: FormData) {
