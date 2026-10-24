@@ -3,6 +3,7 @@ import Link from "next/link";
 import StaffNav from "../../../StaffNav";
 import SlotBar from "../../../ui/SlotBar";
 import RecordEditor from "../../../RecordEditor";
+import SheetTrigger from "../../../ui/SheetTrigger";
 import RoomFilters from "../../RoomFilters";
 import RoleSportFields from "../../../RoleSportFields";
 import ChoiceWithOther from "@/app/_components/ChoiceWithOther";
@@ -104,7 +105,28 @@ export default async function Room({
                     <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm tabular-nums text-slate-700">{s.number ?? "—"}</span>
                     <span className="min-w-0 break-words">{s.prefix ?? ""}{s.firstName} {s.lastName}<span className="ml-2 font-mono text-xs font-normal text-slate-500">รหัส {s.studentCode}</span></span>
                   </div>
-                  <div>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {!r && pick.length > 0 && (
+                      <SheetTrigger className="order-last inline-flex min-h-11 items-center justify-center rounded-xl bg-violet-700 px-4 text-sm font-semibold text-white hover:bg-violet-800" label="บันทึกแทน" title={`เลขที่ ${s.number ?? "—"} · ${s.prefix ?? ""}${s.firstName} ${s.lastName}`} subtitle="บันทึกแทนนักเรียนที่ยังไม่ได้เช็กชื่อ">
+                        <div className="grid gap-4">
+                          {pick.map((x) => (
+                      <form action={manualRecord} key={x.id} className="grid gap-2">
+                        <input type="hidden" name="studentId" value={s.id} />
+                        <input type="hidden" name="slotId" value={x.id} />
+                        <div className="text-xs font-semibold text-slate-700">บันทึกแทนรอบ {periodLabel(x.period)}</div>
+                        <RoleSportFields />
+                        <ChoiceWithOther name="reason" options={ONBEHALF_REASON_OPTIONS} placeholder="เลือกเหตุผลที่บันทึกแทน" otherPlaceholder="พิมพ์เหตุผล (อย่างน้อย 3 ตัวอักษร)" maxLength={500} />
+                        <button className="min-h-11 rounded-xl bg-violet-700 px-4 font-semibold text-white hover:bg-violet-800">บันทึกแทน</button>
+                      </form>
+                    ))}
+                        </div>
+                      </SheetTrigger>
+                    )}
+                    {r && (
+                      <SheetTrigger label="จัดการ" title={`เลขที่ ${s.number ?? "—"} · ${s.prefix ?? ""}${s.firstName} ${s.lastName}`} subtitle={`${roleLabel(r.role)}${r.sport ? ` (${r.sport})` : ""} · เวลา ${formatWallClockTime(r.checkedInAt, true)}`} className="order-last inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+                        <RecordEditor record={r} isAdmin={session.role === "admin"} reviewerName={r.reviewRequestedBy ? reviewers.get(r.reviewRequestedBy) ?? null : null} />
+                      </SheetTrigger>
+                    )}
                     {r ? (
                       <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${r.isSuspicious ? "bg-amber-100 text-amber-900" : "bg-violet-100 text-violet-900"}`}>
                         {roleLabel(r.role)}
@@ -129,7 +151,7 @@ export default async function Room({
 
                 {r && distanceText(r) && <div className="text-sm text-slate-700">📍 {distanceText(r)}</div>}
 
-                {r && <RecordEditor record={r} isAdmin={session.role === "admin"} reviewerName={r.reviewRequestedBy ? reviewers.get(r.reviewRequestedBy) ?? null : null} />}
+                {r?.reviewRequested && <div><span className="inline-flex rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-800">🚩 แจ้ง admin ตรวจแล้ว</span></div>}
 
                 {r && (r.lat !== 0 || r.lng !== 0) && (
                   <div>
@@ -144,20 +166,6 @@ export default async function Room({
                   </div>
                 )}
 
-                {!r && pick.length > 0 && (
-                  <div className="mt-1 border-t border-slate-100 pt-2 space-y-2">
-                    {pick.map((x) => (
-                      <form action={manualRecord} key={x.id} className="grid gap-2">
-                        <input type="hidden" name="studentId" value={s.id} />
-                        <input type="hidden" name="slotId" value={x.id} />
-                        <div className="text-xs font-semibold text-slate-700">บันทึกแทนรอบ {periodLabel(x.period)}</div>
-                        <RoleSportFields />
-                        <ChoiceWithOther name="reason" options={ONBEHALF_REASON_OPTIONS} placeholder="เลือกเหตุผลที่บันทึกแทน" otherPlaceholder="พิมพ์เหตุผล (อย่างน้อย 3 ตัวอักษร)" maxLength={500} />
-                        <button className="secondary py-2 text-sm">บันทึกแทน</button>
-                      </form>
-                    ))}
-                  </div>
-                )}
 
                 {r?.isSuspicious && session.role === "admin" && (
                   <form action={clearFlag} className="mt-1">
