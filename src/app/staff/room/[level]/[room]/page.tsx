@@ -3,6 +3,8 @@ import Link from "next/link";
 import StaffNav from "../../../StaffNav";
 import RecordEditor from "../../../RecordEditor";
 import RoleSportFields from "../../../RoleSportFields";
+import ChoiceWithOther from "@/app/_components/ChoiceWithOther";
+import { ONBEHALF_REASON_OPTIONS } from "@/lib/event";
 import { distanceFromCentre, getGeofence } from "@/lib/geofence";
 import { formatDistance } from "@/lib/geo";
 import { redirect, notFound } from "next/navigation";
@@ -136,7 +138,7 @@ export default async function Room({
                         <input type="hidden" name="slotId" value={x.id} />
                         <div className="text-xs font-semibold text-slate-700">บันทึกแทนรอบ {periodLabel(x.period)}</div>
                         <RoleSportFields />
-                        <input name="reason" required minLength={3} placeholder="เหตุผลที่บันทึกแทน" className="rounded-lg border border-slate-300 p-2 text-sm" />
+                        <ChoiceWithOther name="reason" options={ONBEHALF_REASON_OPTIONS} placeholder="เลือกเหตุผลที่บันทึกแทน" otherPlaceholder="พิมพ์เหตุผล (อย่างน้อย 3 ตัวอักษร)" maxLength={500} />
                         <button className="secondary py-2 text-sm">บันทึกแทน</button>
                       </form>
                     ))}
@@ -214,7 +216,7 @@ export default async function Room({
                           <input type="hidden" name="slotId" value={x.id} />
                           <span className="text-xs font-semibold">{periodLabel(x.period)}</span>
                           <RoleSportFields className="grid gap-1" />
-                          <input name="reason" required minLength={3} placeholder="เหตุผลที่บันทึกแทน" />
+                          <ChoiceWithOther name="reason" options={ONBEHALF_REASON_OPTIONS} placeholder="เลือกเหตุผลที่บันทึกแทน" otherPlaceholder="พิมพ์เหตุผล (อย่างน้อย 3 ตัวอักษร)" maxLength={500} />
                           <button className="secondary">บันทึก</button>
                         </form>
                       ))}

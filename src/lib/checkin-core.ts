@@ -8,7 +8,8 @@ import type { RoomKey } from "@/lib/staff-access";
 import type { Prisma } from "@/generated/prisma/client";
 
 // Server-only domain operations shared by the authenticated actions and the local DB smoke test.
-const SPORT_REQUIRED = false;
+const SPORT_REQUIRED = true; // Trainer 2026-10-24: compete must name a sport (picker + "อื่น ๆ")
+export const SPORT_REQUIRED_MESSAGE = "กรุณาเลือกชนิดกีฬาที่แข่ง";
 type CheckinRole = "compete" | "cheer";
 type Result = { ok: boolean; message: string; distanceM?: number; radiusM?: number };
 type CheckinNow = { dateOnly: Date; wallClock: Date };
@@ -21,7 +22,7 @@ export async function performCheckin(input: { studentId: number; now: CheckinNow
   if (input.role !== "compete" && input.role !== "cheer") return { ok: false, message: "กรุณาเลือกแข่งกีฬาหรือเชียร์" };
   const role = input.role as CheckinRole;
   const sport = input.sport?.trim() ?? "";
-  if (SPORT_REQUIRED && role === "compete" && !sport) return { ok: false, message: "กรุณาระบุกีฬาที่แข่ง" };
+  if (SPORT_REQUIRED && role === "compete" && !sport) return { ok: false, message: SPORT_REQUIRED_MESSAGE };
   const window = resolveSlotWindow(input.now.wallClock);
   if (window.state !== "open") return { ok: false, message: window.state === "not-event-day" ? NOT_EVENT_DAY_MESSAGE : "ยังไม่ถึงเวลาเช็คชื่อหรือหมดเวลาแล้ว" };
   const student = await prisma.student.findUnique({ where: { id: input.studentId }, select: { id: true, house: true, lineUserId: true } });
@@ -47,6 +48,7 @@ export async function performCheckin(input: { studentId: number; now: CheckinNow
 export async function staffRecordCheckin(input: { staffId: number; studentId: number; slotId: number; role: string; sport?: string; reason: string; now: Date; allowedRooms?: RoomKey[]; isAdmin?: boolean }): Promise<Result> {
   const reason = input.reason.trim();
   if (!Number.isSafeInteger(input.studentId) || !Number.isSafeInteger(input.slotId) || !["compete", "cheer"].includes(input.role) || reason.length < 3 || reason.length > 500) return { ok: false, message: "กรุณาเลือกบทบาทและระบุเหตุผล (3–500 ตัวอักษร)" };
+  if (SPORT_REQUIRED && input.role === "compete" && !input.sport?.trim()) return { ok: false, message: SPORT_REQUIRED_MESSAGE };
   try {
     await prisma.$transaction(async tx => {
       const student = await tx.student.findFirst({ where: { id: input.studentId, house: "purple", ...(input.isAdmin ? {} : { OR: (input.allowedRooms ?? []).map(({ classLevel, room }) => ({ classLevel, room })) }) }, select: { id: true } });
@@ -74,6 +76,7 @@ async function editableRecord(tx: Prisma.TransactionClient, input: { recordId: n
 export async function updateStaffRecord(input: { staffId: number; isAdmin: boolean; allowedRooms: RoomKey[]; recordId: number; role: string; sport?: string; reason: string }): Promise<Result> {
   const reason = input.reason.trim();
   if (!Number.isSafeInteger(input.recordId) || !["compete", "cheer"].includes(input.role) || reason.length < 3 || reason.length > 500) return { ok: false, message: "กรุณาเลือกบทบาทและระบุเหตุผล (3–500 ตัวอักษร)" };
+  if (SPORT_REQUIRED && input.role === "compete" && !input.sport?.trim()) return { ok: false, message: SPORT_REQUIRED_MESSAGE };
   try {
     await prisma.$transaction(async tx => {
       const before = await editableRecord(tx, input);

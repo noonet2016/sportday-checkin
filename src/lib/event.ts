@@ -4,6 +4,10 @@ export type EventPeriod = (typeof EVENT_PERIODS)[number];
 export const periodLabel = (period: string): string => period === "morning" ? "เช้า" : "บ่าย";
 export const roleLabel = (role: string): string => role === "compete" ? "🏃 แข่งกีฬา" : "📣 เชียร์";
 export const roleCsvLabel = (role: string): string => role === "compete" ? "แข่งกีฬา" : "เชียร์";
+/** International sports offered in pickers (Trainer, 2026-10-24); anything else goes through "อื่น ๆ". */
+export const SPORT_OPTIONS = ["ฟุตบอล", "ฟุตซอล", "วอลเลย์บอล", "บาสเกตบอล", "แบดมินตัน", "เทเบิลเทนนิส", "เซปักตะกร้อ", "แฮนด์บอล", "กรีฑา", "เปตอง"] as const;
+/** Common reasons a teacher records a check-in on a student's behalf; anything else goes through "อื่น ๆ". */
+export const ONBEHALF_REASON_OPTIONS = ["ไม่ได้นำโทรศัพท์มา", "แบตเตอรี่โทรศัพท์หมด", "โทรศัพท์ไม่มีอินเทอร์เน็ต", "GPS ใช้งานไม่ได้", "ไม่มีโทรศัพท์มือถือ", "ช่วยงานกิจกรรม / ทำหน้าที่อื่น"] as const;
 /** Pass rule (Trainer, 2026-10-24): attend at least 80% of all event slots. */
 export const PASS_RATIO = 0.8;
 export const attendancePercent = (attended: number, totalSlots: number): number => totalSlots > 0 ? Math.round((attended / totalSlots) * 100) : 0;

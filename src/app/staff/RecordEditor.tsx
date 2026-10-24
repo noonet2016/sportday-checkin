@@ -1,5 +1,7 @@
 import { cancelRecord, editRecord } from "@/app/staff/actions";
 import RoleSportFields from "./RoleSportFields";
+import ChoiceWithOther from "@/app/_components/ChoiceWithOther";
+import { ONBEHALF_REASON_OPTIONS } from "@/lib/event";
 
 type EditableRecord = { id: number; role: string; sport: string | null; note: string | null; source: string; staff: { displayName: string } | null };
 
@@ -21,7 +23,9 @@ export default function RecordEditor({ record, isAdmin }: { record: EditableReco
           <form action={editRecord} className="mt-2 grid gap-2">
             <input type="hidden" name="recordId" value={record.id} />
             <RoleSportFields defaultRole={record.role} defaultSport={record.sport ?? ""} />
-            <input name="reason" required minLength={3} maxLength={500} defaultValue={isStaffRecord ? record.note ?? "" : ""} placeholder={isStaffRecord ? "เหตุผลที่บันทึกแทน" : "เหตุผลที่แก้ไข"} className="rounded-lg border border-slate-300 p-2 text-sm" />
+            {isStaffRecord
+              ? <ChoiceWithOther name="reason" options={ONBEHALF_REASON_OPTIONS} defaultValue={record.note ?? ""} placeholder="เลือกเหตุผลที่บันทึกแทน" otherPlaceholder="พิมพ์เหตุผล (อย่างน้อย 3 ตัวอักษร)" maxLength={500} />
+              : <input name="reason" required minLength={3} maxLength={500} placeholder="เหตุผลที่แก้ไข" className="rounded-lg border border-slate-300 p-2 text-sm" />}
             <button className="rounded-lg bg-violet-700 px-3 py-2 font-semibold text-white hover:bg-violet-800">บันทึกการแก้ไข</button>
           </form>
           {isStaffRecord && (

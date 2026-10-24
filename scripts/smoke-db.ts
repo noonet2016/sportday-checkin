@@ -1,5 +1,5 @@
 import { prisma } from "../src/lib/prisma";
-import { performCheckin, staffRecordCheckin, clearCheckinFlag, deleteCheckinRecord, updateStaffRecord, cancelStaffRecord, CHECKIN_ALREADY_DONE_MESSAGE, NOT_EVENT_DAY_MESSAGE, STAFF_STUDENT_ALREADY_CHECKED_IN_MESSAGE } from "../src/lib/checkin-core";
+import { performCheckin, staffRecordCheckin, clearCheckinFlag, deleteCheckinRecord, updateStaffRecord, cancelStaffRecord, SPORT_REQUIRED_MESSAGE, CHECKIN_ALREADY_DONE_MESSAGE, NOT_EVENT_DAY_MESSAGE, STAFF_STUDENT_ALREADY_CHECKED_IN_MESSAGE } from "../src/lib/checkin-core";
 import type { CheckinGpsSample } from "../src/lib/spoof";
 import { nowInBangkok } from "../src/lib/time";
 import { allowedRooms, roomAllowed } from "../src/lib/staff-access";
@@ -63,7 +63,7 @@ async function main() {
     await check("open-window accepts and persists one row plus audit", async () => openResult.ok && Boolean(await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: student.id, slotId: morning.id } } })) && Boolean(await prisma.auditLog.findFirst({ where: { actor: `student:${student.id}`, action: "checkin_created" } })));
     await check("self check-in time is stored as Bangkok wall-clock (08:30, not 01:30)", async () => (await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: student.id, slotId: morning.id } }, select: { checkedInAt: true } }))?.checkedInAt.toISOString() === "2026-10-26T08:30:00.000Z");
     await check("check-in result reports distance and radius", async () => typeof openResult.distanceM === "number" && typeof openResult.radiusM === "number" && openResult.distanceM <= openResult.radiusM);
-    const duplicate = await performCheckin({ studentId: student.id, now: at(8, 30), role: "compete", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
+    const duplicate = await performCheckin({ studentId: student.id, now: at(8, 30), role: "compete", sport: "ฟุตบอล", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
     await check("second call returns friendly already-checked-in result and row count stays 1", async () => duplicate.ok && duplicate.message === CHECKIN_ALREADY_DONE_MESSAGE && await prisma.checkinRecord.count({ where: { studentId: student.id, slotId: morning.id } }) === 1);
 
     stage = "geofence and suspicious GPS";
@@ -90,6 +90,9 @@ async function main() {
     stage = "staff check-in core";
     const emptyReason = await staffRecordCheckin({ staffId: admin.id, isAdmin: true, allowedRooms: adminScope, studentId: staffStudent.id, slotId: morning.id, role: "compete", reason: " ", now: at(8, 30).wallClock });
     await check("staff on-behalf empty reason rejects", async () => !emptyReason.ok && !(await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: staffStudent.id, slotId: morning.id } } })));
+    const competeNoSportStaff = await staffRecordCheckin({ staffId: admin.id, isAdmin: true, allowedRooms: adminScope, studentId: staffStudent.id, slotId: morning.id, role: "compete", reason: "ไม่ได้นำโทรศัพท์มา", now: at(8, 30).wallClock });
+    const competeNoSportStudent = await performCheckin({ studentId: geoStudent.id, now: at(8, 30), role: "compete", sport: "  ", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
+    await check("compete without a sport is rejected (staff + student)", async () => !competeNoSportStaff.ok && competeNoSportStaff.message === SPORT_REQUIRED_MESSAGE && !competeNoSportStudent.ok && competeNoSportStudent.message === SPORT_REQUIRED_MESSAGE && !await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: staffStudent.id, slotId: morning.id } } }));
     const staffResult = await staffRecordCheckin({ staffId: admin.id, isAdmin: true, allowedRooms: adminScope, studentId: staffStudent.id, slotId: morning.id, role: "cheer", reason: "late arrival", now: at(8, 30).wallClock });
     const staffRow = await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: staffStudent.id, slotId: morning.id } }, select: { id: true, source: true, staffId: true } });
     await check("staff on-behalf with reason persists source, staffId and audit", async () => staffResult.ok && staffRow?.source === "staff" && staffRow.staffId === admin.id && Boolean(await prisma.auditLog.findFirst({ where: { actor: `staff:${admin.id}`, action: "staff_checkin_created", targetId: String(staffRow.id) } })));
