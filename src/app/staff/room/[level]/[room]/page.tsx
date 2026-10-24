@@ -49,6 +49,8 @@ export default async function Room({
 
   const map = new Map(records.map(r => [r.studentId, r]));
   const fence = await getGeofence();
+  // Spoof-detection reasons are for the admin to judge; teachers do not see them (Trainer, 2026-10-24).
+  const isAdmin = session.role === "admin";
   const distanceText = (r: { source: string; lat: number; lng: number }) => {
     if (!fence || r.source !== "self") return null;
     const d = distanceFromCentre(fence, r.lat, r.lng);
@@ -107,7 +109,7 @@ export default async function Room({
                   <span className="font-medium text-slate-900">{r ? formatWallClockTime(r.checkedInAt, true) : "—"}</span>
                 </div>
 
-                {r?.suspicionReasons && (
+                {isAdmin && r?.suspicionReasons && (
                   <div className="rounded-lg bg-amber-50 p-2 text-xs text-amber-900 break-words">
                     ⚠️ <b>เหตุผลธง:</b> {r.suspicionReasons}
                   </div>
@@ -172,7 +174,7 @@ export default async function Room({
                 <th>นักเรียน</th>
                 <th>สถานะ / บทบาท</th>
                 <th>เวลา</th>
-                <th>เหตุผลธง</th>
+                {isAdmin && <th>เหตุผลธง</th>}
                 <th>แผนที่</th>
                 <th>บันทึกแทน</th>
               </tr>
@@ -198,7 +200,7 @@ export default async function Room({
                       )}
                     </td>
                     <td>{r ? formatWallClockTime(r.checkedInAt, true) : "—"}</td>
-                    <td className="break-words max-w-xs">{r?.suspicionReasons ?? "—"}</td>
+                    {isAdmin && <td className="break-words max-w-xs">{r?.suspicionReasons ?? "—"}</td>}
                     <td>
                       {r && distanceText(r) && <div className="mb-1 whitespace-nowrap text-xs text-slate-700">📍 {distanceText(r)}</div>}
                       {r && (r.lat !== 0 || r.lng !== 0) ? (
