@@ -6,6 +6,7 @@ export const roleLabel = (role: string): string => role === "compete" ? "🏃 �
 export const roleCsvLabel = (role: string): string => role === "compete" ? "แข่งกีฬา" : "เชียร์";
 /** Pass rule (Trainer, 2026-10-24): attend at least 80% of all event slots. */
 export const PASS_RATIO = 0.8;
+export const attendancePercent = (attended: number, totalSlots: number): number => totalSlots > 0 ? Math.round((attended / totalSlots) * 100) : 0;
 export const attendancePassed = (attended: number, totalSlots: number): boolean => totalSlots > 0 && attended / totalSlots >= PASS_RATIO;
 /** Slot columns in time order (Prisma's orderBy period sorts "afternoon" before "morning"). */
 export const periodOrder = (period: string): number => period === "morning" ? 0 : 1;

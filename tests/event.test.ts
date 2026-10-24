@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { attendancePassed, EVENT_DATES, resolveSlotWindow } from "../src/lib/event";
+import { attendancePassed, attendancePercent, EVENT_DATES, resolveSlotWindow } from "../src/lib/event";
 import { haversineDistance } from "../src/lib/geo";
 import { scoreSuspicion, type CheckinGpsSample } from "../src/lib/spoof";
 
@@ -69,4 +69,11 @@ test("attendancePassed uses the 80% rule over all slots", () => {
   assert.equal(attendancePassed(7, 10), false);
   assert.equal(attendancePassed(10, 10), true);
   assert.equal(attendancePassed(0, 0), false);
+});
+
+test("attendancePercent rounds to whole percent", () => {
+  assert.equal(attendancePercent(8, 10), 80);
+  assert.equal(attendancePercent(7, 10), 70);
+  assert.equal(attendancePercent(2, 3), 67);
+  assert.equal(attendancePercent(0, 0), 0);
 });

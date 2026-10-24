@@ -1,4 +1,4 @@
-import { attendancePassed, compareRooms, periodLabel, periodOrder, roleCsvLabel } from "@/lib/event";
+import { attendancePassed, attendancePercent, compareRooms, periodLabel, periodOrder, roleCsvLabel } from "@/lib/event";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
   const q = (x: unknown) => `"${String(x ?? "").replaceAll('"', '""')}"`;
   const rows: string[][] = [
-    ["รหัส", "ชื่อ", "ระดับ", "ห้อง", "โครงการ", ...days.flatMap(d => d.slots.map(s => `${formatDateInput(d.date)} ${periodLabel(s.period)}`)), "รวม", "สถานะ"]
+    ["รหัส", "ชื่อ", "ระดับ", "ห้อง", "โครงการ", ...days.flatMap(d => d.slots.map(s => `${formatDateInput(d.date)} ${periodLabel(s.period)}`)), "รวม", "ร้อยละ", "สถานะ"]
   ];
   for (const s of students) {
     const slots = days.flatMap(d => d.slots);
@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       s.program ?? "",
       ...vals,
       `${count}/${slots.length}`,
+      `${attendancePercent(count, slots.length)}%`,
       attendancePassed(count, slots.length) ? "ผ่าน" : "ไม่ผ่าน"
     ]);
   }

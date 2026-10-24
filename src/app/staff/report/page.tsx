@@ -1,4 +1,4 @@
-import { attendancePassed, compareRooms, PASS_RATIO, periodLabel, periodOrder, roleLabel } from "@/lib/event";
+import { attendancePassed, attendancePercent, compareRooms, PASS_RATIO, periodLabel, periodOrder, roleLabel } from "@/lib/event";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -41,6 +41,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                 <th>ห้อง</th>
                 {days.flatMap(d => d.slots.map(s => <th key={s.id}>{formatDateInput(d.date)} {periodLabel(s.period)}</th>))}
                 <th>รวม</th>
+                <th>ร้อยละ</th>
                 <th>สถานะ</th>
               </tr>
             </thead>
@@ -57,6 +58,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                       return <td key={slot.id}>{r ? roleLabel(r.role) : "—"}</td>;
                     }))}
                     <td>{done}/{allSlots.length}</td>
+                    <td className={`whitespace-nowrap font-bold ${passed ? "text-emerald-700" : "text-red-700"}`}>{attendancePercent(done, allSlots.length)}%</td>
                     <td><span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-bold text-white ${passed ? "bg-emerald-600" : "bg-red-600"}`}>{passed ? "✅ ผ่าน" : "❌ ไม่ผ่าน"}</span></td>
                   </tr>
                 );
