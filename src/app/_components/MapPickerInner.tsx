@@ -73,13 +73,6 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
-        <label className="block text-sm font-semibold text-slate-800">วางพิกัดหรือลิงก์จาก Google Maps
-          <input value={paste} onChange={(event) => setPaste(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void applyPastedLocation(); } }} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900" />
-        </label>
-        <button type="button" onClick={applyPastedLocation} className="w-full rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white hover:bg-violet-800">ใช้ตำแหน่งนี้</button>
-        {pasteMessage && <p role="status" className="break-words text-sm text-amber-800">{pasteMessage}</p>}
-      </div>
       <div className="relative isolate z-0 h-[60vh] min-h-[420px] max-h-[720px] overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-950 shadow-inner">
         <MapContainer center={position} zoom={17} scrollWheelZoom className="h-full w-full">
           {basemap === "satellite" ? (
@@ -102,6 +95,13 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
         >
           {basemap === "street" ? "🛰️ ดาวเทียม" : "🗺️ แผนที่"}
         </button>
+      </div>
+      <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+        <label className="block text-sm font-semibold text-slate-800">วางพิกัดหรือลิงก์จาก Google Maps
+          <input value={paste} onChange={(event) => setPaste(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void applyPastedLocation(); } }} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900" />
+        </label>
+        <button type="button" onClick={applyPastedLocation} className="w-full rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white hover:bg-violet-800">ใช้ตำแหน่งนี้</button>
+        {pasteMessage && <p role="status" className="break-words text-sm text-amber-800">{pasteMessage}</p>}
       </div>
       <button type="button" onClick={useCurrentPosition} disabled={locating} className="w-full rounded-lg bg-sky-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:cursor-wait disabled:bg-sky-400">
         {locating ? "กำลังค้นหาตำแหน่ง…" : "📍 ดึงตำแหน่งปัจจุบัน"}
