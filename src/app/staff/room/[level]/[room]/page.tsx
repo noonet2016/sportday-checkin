@@ -58,7 +58,98 @@ export default async function Room({
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile (<640px): one card per student */}
+        <div className="space-y-3 sm:hidden">
+          {students.map((s) => {
+            const r = map.get(s.id);
+            return (
+              <article key={s.id} className="rounded-xl border border-violet-100 bg-white p-4 shadow-sm flex flex-col gap-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-bold text-slate-900 break-words">
+                    <span className="font-mono text-sm text-violet-700 mr-2">{s.studentCode}</span>
+                    {s.prefix ?? ""}{s.firstName} {s.lastName}
+                  </div>
+                  <div>
+                    {r ? (
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${r.isSuspicious ? "bg-amber-100 text-amber-900" : "bg-violet-100 text-violet-900"}`}>
+                        {roleLabel(r.role)}
+                        {r.sport ? ` (${r.sport})` : ""}
+                        {r.source === "staff" ? " (เจ้าหน้าที่)" : ""}
+                        {r.isSuspicious && " ⚠️"}
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                        ยังไม่เช็ก
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-sm text-slate-700">
+                  <span className="text-slate-500">เวลา: </span>
+                  <span className="font-medium text-slate-900">{r ? formatWallClockTime(r.checkedInAt, true) : "—"}</span>
+                </div>
+
+                {r?.suspicionReasons && (
+                  <div className="rounded-lg bg-amber-50 p-2 text-xs text-amber-900 break-words">
+                    ⚠️ <b>เหตุผลธง:</b> {r.suspicionReasons}
+                  </div>
+                )}
+
+                {r && (r.lat !== 0 || r.lng !== 0) && (
+                  <div>
+                    <a
+                      target="_blank"
+                      rel="noreferrer"
+                      href={`https://maps.google.com/?q=${r.lat},${r.lng}`}
+                      className="inline-flex items-center text-sm font-semibold text-sky-700 underline hover:text-sky-800"
+                    >
+                      📍 เปิดแผนที่
+                    </a>
+                  </div>
+                )}
+
+                {!r && pick.length > 0 && (
+                  <div className="mt-1 border-t border-slate-100 pt-2 space-y-2">
+                    {pick.map((x) => (
+                      <form action={manualRecord} key={x.id} className="grid gap-2">
+                        <input type="hidden" name="studentId" value={s.id} />
+                        <input type="hidden" name="slotId" value={x.id} />
+                        <div className="text-xs font-semibold text-slate-700">บันทึกแทนรอบ {periodLabel(x.period)}</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <select name="role" className="rounded-lg border border-slate-300 p-2 text-sm bg-white text-slate-900">
+                            <option value="compete">🏃 แข่งกีฬา</option>
+                            <option value="cheer">📣 เชียร์</option>
+                          </select>
+                          <input name="sport" placeholder="กีฬา (ถ้าแข่ง)" className="rounded-lg border border-slate-300 p-2 text-sm" />
+                        </div>
+                        <input name="reason" required minLength={3} placeholder="เหตุผลที่บันทึกแทน" className="rounded-lg border border-slate-300 p-2 text-sm" />
+                        <button className="secondary py-2 text-sm">บันทึกแทน</button>
+                      </form>
+                    ))}
+                  </div>
+                )}
+
+                {r?.isSuspicious && session.role === "admin" && (
+                  <form action={clearFlag} className="mt-1">
+                    <input type="hidden" name="recordId" value={r.id} />
+                    <button className="secondary py-1.5 px-3 text-sm">ล้างธง</button>
+                  </form>
+                )}
+
+                {r && session.role === "admin" && (
+                  <form action={deleteRecord} className="mt-1">
+                    <input type="hidden" name="recordId" value={r.id} />
+                    <button className="secondary py-1.5 px-3 text-sm text-rose-700 hover:bg-rose-50">ลบรายการ</button>
+                  </form>
+                )}
+              </article>
+            );
+          })}
+        </div>
+
+        {/* Desktop (>=640px): table view */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr>
