@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   const q = (x: unknown) => `"${String(x ?? "").replaceAll('"', '""')}"`;
   const rows: string[][] = [
-    ["เลขที่", "รหัส", "ชื่อ", "ระดับ", "ห้อง", "โครงการ", ...days.flatMap(d => d.slots.map(s => `${formatThaiDate(d.date, { year: true })} ${periodLabel(s.period)}`)), "รวม", "ร้อยละ", "สถานะ"]
+    ["เลขที่", "รหัส", "ชื่อ", "ระดับ", "ห้อง", "ประเภทห้องเรียน", ...days.flatMap(d => d.slots.map(s => `${formatThaiDate(d.date, { year: true })} ${periodLabel(s.period)}`)), "รวม", "ร้อยละ", "สถานะ"]
   ];
   for (const s of students) {
     const slots = days.flatMap(d => d.slots);
