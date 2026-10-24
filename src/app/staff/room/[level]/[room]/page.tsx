@@ -42,8 +42,9 @@ export default async function Room({
   }) : [];
 
   const map = new Map(records.map(r => [r.studentId, r]));
+  // On-behalf targets only the slot being viewed; the status shown on this page is for that slot.
   const pick = await prisma.checkinSlot.findMany({
-    where: { eventDay: { date: selectedDate } },
+    where: { id: slot?.id ?? -1 },
     select: { id: true, period: true },
   });
 
