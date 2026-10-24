@@ -2,7 +2,7 @@ import { attendancePassed, attendancePercent, compareRooms, periodLabel, periodO
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { formatDateInput } from "@/lib/time";
+import { formatThaiDate } from "@/lib/time";
 import { allowedRooms, roomFilter } from "@/lib/staff-access";
 import { studentNameFilter } from "@/lib/student-search";
 
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   const q = (x: unknown) => `"${String(x ?? "").replaceAll('"', '""')}"`;
   const rows: string[][] = [
-    ["เลขที่", "รหัส", "ชื่อ", "ระดับ", "ห้อง", "โครงการ", ...days.flatMap(d => d.slots.map(s => `${formatDateInput(d.date)} ${periodLabel(s.period)}`)), "รวม", "ร้อยละ", "สถานะ"]
+    ["เลขที่", "รหัส", "ชื่อ", "ระดับ", "ห้อง", "โครงการ", ...days.flatMap(d => d.slots.map(s => `${formatThaiDate(d.date, { year: true })} ${periodLabel(s.period)}`)), "รวม", "ร้อยละ", "สถานะ"]
   ];
   for (const s of students) {
     const slots = days.flatMap(d => d.slots);

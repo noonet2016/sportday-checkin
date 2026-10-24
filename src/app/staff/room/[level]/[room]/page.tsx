@@ -10,7 +10,7 @@ import { formatDistance } from "@/lib/geo";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { parseDateInput, formatWallClockTime, formatDateInput, nowInBangkok } from "@/lib/time";
+import { parseDateInput, formatWallClockTime, formatDateInput, formatThaiDate, nowInBangkok } from "@/lib/time";
 import { manualRecord, clearFlag, deleteRecord } from "@/app/staff/actions";
 import { allowedRooms, roomAllowed } from "@/lib/staff-access";
 
@@ -88,7 +88,7 @@ export default async function Room({
           <p className="text-sm font-semibold text-slate-800">เลือกวันและรอบ <span className="font-normal text-slate-500">(🔒 = ยังไม่ถึงเวลา)</span></p>
           {slotDays.map(([dateKey, daySlots]) => (
             <div key={dateKey} className="flex flex-wrap items-center gap-2">
-              <span className="w-24 text-sm text-slate-700">{thaiDayLabel(daySlots[0].eventDay.date)}</span>
+              <span className="w-24 text-sm text-slate-700">{formatThaiDate(daySlots[0].eventDay.date)}</span>
               {daySlots.map(x => {
                 const active = slot?.id === x.id;
                 const started = slotStarted(x);
@@ -104,7 +104,7 @@ export default async function Room({
         </div>
         {slot && !viewedStarted && <p className="notice">รอบนี้ยังไม่ถึงเวลา — ดูรายชื่อได้ แต่บันทึกแทนได้หลังเปิดรอบแล้วเท่านั้น</p>}
         {slot && viewedIsPast && <p className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900">🕘 รอบนี้ผ่านไปแล้ว — บันทึกแทนที่นี่จะเป็นการ<b>บันทึกย้อนหลัง</b></p>}
-        {slot && <p className="text-sm text-slate-700">{formatDateInput(slot.opensAt)} รอบ{periodLabel(slot.period)} · ยังไม่เช็ค <b className="text-red-700">{missingCount}</b> คน{missingCount > 0 ? " — แสดงไว้ด้านบนพร้อมฟอร์มบันทึกแทน" : ""}</p>}
+        {slot && <p className="text-sm text-slate-700">{formatThaiDate(slot.opensAt, { year: true })} รอบ{periodLabel(slot.period)} · ยังไม่เช็ค <b className="text-red-700">{missingCount}</b> คน{missingCount > 0 ? " — แสดงไว้ด้านบนพร้อมฟอร์มบันทึกแทน" : ""}</p>}
 
         {/* Mobile (<640px): one card per student */}
         <div className="space-y-3 sm:hidden">
@@ -276,9 +276,3 @@ export default async function Room({
   );
 }
 
-const THAI_WEEKDAYS = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
-const THAI_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-/** Event dates are stored as DATE (UTC fields = Bangkok calendar day): "จ. 26 ต.ค." */
-function thaiDayLabel(date: Date): string {
-  return `${THAI_WEEKDAYS[date.getUTCDay()]} ${date.getUTCDate()} ${THAI_MONTHS[date.getUTCMonth()]}`;
-}

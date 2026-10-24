@@ -118,3 +118,14 @@ export function formatInstantDate(date: Date): string {
     year: "numeric",
   }).format(date);
 }
+
+const THAI_WEEKDAYS = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
+const THAI_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+/**
+ * Thai date for display from a wall-clock / DATE value (its UTC fields are the Bangkok calendar day):
+ * "จ. 26 ต.ค." by default, "จ. 26 ต.ค. 2569" with { year: true } (Buddhist Era).
+ */
+export function formatThaiDate(date: Date, { weekday = true, year = false }: { weekday?: boolean; year?: boolean } = {}): string {
+  const day = `${date.getUTCDate()} ${THAI_MONTHS[date.getUTCMonth()]}${year ? ` ${date.getUTCFullYear() + 543}` : ""}`;
+  return weekday ? `${THAI_WEEKDAYS[date.getUTCDay()]} ${day}` : day;
+}

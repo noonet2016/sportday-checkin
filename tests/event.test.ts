@@ -89,3 +89,11 @@ test("formatDistance switches to kilometres from 1 km", () => {
   assert.equal(formatDistance(523456), "523 กม.");
   assert.equal(formatDistance(1523456), "1,523 กม.");
 });
+
+test("formatThaiDate renders Thai weekday, month and Buddhist year", async () => {
+  const { formatThaiDate } = await import("../src/lib/time");
+  const d = new Date(Date.UTC(2026, 9, 26));
+  assert.equal(formatThaiDate(d), "จ. 26 ต.ค.");
+  assert.equal(formatThaiDate(d, { year: true }), "จ. 26 ต.ค. 2569");
+  assert.equal(formatThaiDate(new Date(Date.UTC(2026, 9, 30)), { weekday: false, year: true }), "30 ต.ค. 2569");
+});

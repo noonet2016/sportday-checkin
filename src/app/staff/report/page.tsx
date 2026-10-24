@@ -2,7 +2,7 @@ import { attendancePassed, attendancePercent, compareRooms, PASS_RATIO, periodLa
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { formatDateInput } from "@/lib/time";
+import { formatThaiDate } from "@/lib/time";
 import StaffNav from "../StaffNav";
 import { allowedRooms, roomFilter } from "@/lib/staff-access";
 import { studentNameFilter } from "@/lib/student-search";
@@ -53,7 +53,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                 <th>เลขที่</th>
                 <th>นักเรียน</th>
                 <th>ห้อง</th>
-                {days.flatMap(d => d.slots.map(s => <th key={s.id}>{formatDateInput(d.date)} {periodLabel(s.period)}</th>))}
+                {days.flatMap(d => d.slots.map(s => <th key={s.id} className="whitespace-nowrap">{formatThaiDate(d.date)}<br />{periodLabel(s.period)}</th>))}
                 <th>รวม</th>
                 <th>ร้อยละ</th>
                 <th>สถานะ</th>
@@ -84,7 +84,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
         <h2>สรุปรายวัน</h2>
         {days.map(d => (
           <p key={d.id}>
-            {formatDateInput(d.date)}: {d.slots.map(slot => `${periodLabel(slot.period)} ${records.filter(r => r.slotId === slot.id).length}/${students.length}`).join(" · ")}
+            {formatThaiDate(d.date, { year: true })}: {d.slots.map(slot => `${periodLabel(slot.period)} ${records.filter(r => r.slotId === slot.id).length}/${students.length}`).join(" · ")}
           </p>
         ))}
       </section>
