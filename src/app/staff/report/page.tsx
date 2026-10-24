@@ -48,10 +48,10 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
   return (
     <main className="screen" style={{ maxWidth: "90rem", alignContent: "start" }}>
       <StaffNav active="report" />
-      <section className="card">
-        <h1>รายงานการเช็กชื่อ</h1>
+      <section className="card gap-4 border-slate-200 p-3 sm:p-4">
+        <header className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-xl font-bold">รายงานการเช็กชื่อ</h1><a className="secondary min-h-11 border border-slate-300 bg-white text-slate-800 no-underline" href={`/staff/report.csv${csvQuery ? `?${csvQuery}` : ""}`}>ดาวน์โหลด CSV</a></header>
         <p>เกณฑ์ผ่าน: เข้าร่วมอย่างน้อย {Math.round(PASS_RATIO * 100)}% ({Math.ceil(PASS_RATIO * allSlots.length)}/{allSlots.length} ครั้ง){paginate ? " · รวมทุกห้อง: " : " · "}ผ่าน <b className="text-emerald-700">{passedCount}</b> · ไม่ผ่าน <b className="text-red-700">{students.length - passedCount}</b> จาก {students.length} คน</p>
-        <form>
+        <form className="grid gap-3 md:flex md:flex-wrap md:items-end">
           {roomOptions.length > 1 && (
             <label>ห้อง
               <select name="room" defaultValue={pickedKey} className="rounded-xl border-2 border-violet-300 bg-white p-3 text-base text-slate-900">
@@ -60,16 +60,22 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
               </select>
             </label>
           )}
-          <label>ค้นหานักเรียน<input name="q" type="search" defaultValue={q ?? ""} placeholder="ชื่อ นามสกุล หรือเลขประจำตัว" /></label>
+          <label className="md:min-w-64">ค้นหานักเรียน<input name="q" type="search" defaultValue={q ?? ""} placeholder="ชื่อ นามสกุล หรือเลขประจำตัว" /></label>
           <div className="flex flex-wrap gap-2">
             <button className="primary whitespace-nowrap">แสดงผล</button>
             {(q || pickedKey) && <a className="secondary whitespace-nowrap" href="/staff/report">ล้างตัวกรอง</a>}
-            <a className="secondary whitespace-nowrap" href={`/staff/report.csv${csvQuery ? `?${csvQuery}` : ""}`}>ดาวน์โหลด CSV</a>
           </div>
         </form>
         {pager}
         {pageRoom && <p>ห้องนี้: ผ่าน <b className="text-emerald-700">{shownPassed}</b> · ไม่ผ่าน <b className="text-red-700">{shown.length - shownPassed}</b> จาก {shown.length} คน</p>}
-        <div className="overflow-x-auto">
+        <div className="grid gap-2 md:hidden">
+          {shown.map(s => { const done = attendedOf(s.id); const passed = attendancePassed(done, allSlots.length); return <article key={s.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-2"><div className="font-semibold">{s.studentCode} {s.prefix ?? ""}{s.firstName} {s.lastName}<div className="text-sm font-normal text-slate-600">{s.classLevel}/{s.room} · เลขที่ {s.number ?? "—"}</div></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${passed ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>{passed ? "ผ่าน" : "ไม่ผ่าน"}</span></div>
+            <div className="mt-3 grid grid-cols-10 gap-1" aria-label="การเข้าร่วมรายรอบ">{allSlots.map(slot => { const attended = map.has(`${s.id}:${slot.id}`); return <span key={slot.id} title={`${periodLabel(slot.period)}: ${attended ? "เช็กแล้ว" : "ยังไม่เช็ก"}`} aria-label={`${periodLabel(slot.period)} ${attended ? "เช็กแล้ว" : "ยังไม่เช็ก"}`} className={`h-3 rounded-sm ${attended ? "bg-emerald-500" : "bg-slate-200"}`} />; })}</div>
+            <div className="mt-2 text-right text-sm font-semibold tabular-nums">{done}/{allSlots.length}</div>
+          </article>; })}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[72rem] text-left text-sm">
             <thead>
               <tr>
@@ -93,11 +99,11 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                     <td>{s.classLevel}/{s.room} {s.program}</td>
                     {days.flatMap(d => d.slots.map(slot => {
                       const r = map.get(`${s.id}:${slot.id}`);
-                      return <td key={slot.id}>{r ? roleLabel(r.role) : "—"}</td>;
+                      return <td key={slot.id} title={r ? roleLabel(r.role) : "ยังไม่เช็ก"}><span aria-label={r ? roleLabel(r.role) : "ยังไม่เช็ก"} className={`inline-block h-3 w-3 rounded-sm ${r ? "bg-emerald-500" : "bg-slate-200"}`} /></td>;
                     }))}
                     <td>{done}/{allSlots.length}</td>
                     <td className={`whitespace-nowrap font-bold ${passed ? "text-emerald-700" : "text-red-700"}`}>{attendancePercent(done, allSlots.length)}%</td>
-                    <td><span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-bold text-white ${passed ? "bg-emerald-600" : "bg-red-600"}`}>{passed ? "✅ ผ่าน" : "❌ ไม่ผ่าน"}</span></td>
+                    <td><span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-bold ${passed ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>{passed ? "ผ่าน" : "ไม่ผ่าน"}</span></td>
                   </tr>
                 );
               })}
