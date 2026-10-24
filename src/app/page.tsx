@@ -1,17 +1,16 @@
 import Link from "next/link";
+import { MapPin, ShieldCheck } from "lucide-react";
+import StudentShell from "@/app/_components/StudentShell";
 
 export default function HomePage() {
   return (
-    <main className="screen">
-      <section className="card">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-700">คณะสีม่วง</p>
-        <h1 className="text-3xl font-bold">ระบบเช็คชื่อกิจกรรมกีฬาสี</h1>
-        <p className="text-slate-700">ระบบเช็คชื่อนักเรียนและเครื่องมือสำหรับครู/เจ้าหน้าที่</p>
-        <div className="mt-4 flex flex-col gap-3">
-          <Link href="/checkin" className="link-button">เช็คชื่อนักเรียน</Link>
-          <Link href="/staff" className="link-button" style={{ background: "#4c1d95" }}>สำหรับครู / เจ้าหน้าที่</Link>
-        </div>
+    <StudentShell>
+      <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h1 className="text-2xl font-bold text-slate-900">ระบบเช็คชื่อกิจกรรมกีฬาสี</h1>
+        <p className="text-slate-600">นักเรียนเช็คชื่อผ่าน LINE วันละ 2 รอบ · ครูและเจ้าหน้าที่ดูผลและบันทึกแทน</p>
+        <Link href="/checkin" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-violet-700 px-4 text-lg font-bold text-white no-underline hover:bg-violet-800"><MapPin aria-hidden="true" size={22} />เช็คชื่อนักเรียน</Link>
+        <Link href="/staff" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-violet-300 bg-white px-4 font-semibold text-violet-800 no-underline hover:bg-violet-50"><ShieldCheck aria-hidden="true" size={18} />สำหรับครู / เจ้าหน้าที่</Link>
       </section>
-    </main>
+    </StudentShell>
   );
 }

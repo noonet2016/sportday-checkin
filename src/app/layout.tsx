@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Noto_Sans_Thai } from "next/font/google";
+
+const thai = Noto_Sans_Thai({ subsets: ["thai"], weight: ["400", "500", "600", "700"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "เช็คชื่อกีฬาสี · สีม่วง",
@@ -9,7 +12,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="th">
-      <body>{children}</body>
+      <body className={thai.className}>{children}</body>
     </html>
   );
 }
