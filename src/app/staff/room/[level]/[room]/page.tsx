@@ -106,14 +106,30 @@ export default async function Room({
             const r = map.get(s.id);
             return (
               <article key={s.id} data-student-status={r ? r.isSuspicious ? "flagged" : "checked" : "missing"} hidden={Boolean(slot && viewedStarted && !viewedIsPast && r && !r.isSuspicious)} className="grid min-h-16 gap-2 py-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="flex min-w-0 flex-1 items-start gap-2 font-bold text-slate-900">
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm tabular-nums text-slate-700">{s.number ?? "—"}</span>
-                    <span className="min-w-0 break-words">{s.prefix ?? ""}{s.firstName} {s.lastName}<span className="ml-2 font-mono text-xs font-normal text-slate-500">รหัส {s.studentCode}</span></span>
+                <div className="flex items-start gap-2">
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold tabular-nums text-slate-700">{s.number ?? "—"}</span>
+                  <h3 className="min-w-0 flex-1 pt-1 text-base font-bold leading-snug text-slate-900">{s.prefix ?? ""}{s.firstName} {s.lastName}</h3>
+                </div>
+                <div className="grid gap-2 pl-11">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
+                    <span className="font-mono text-slate-500">รหัส {s.studentCode}</span>
+                    {r ? (
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${r.isSuspicious ? "bg-amber-100 text-amber-900" : "bg-violet-100 text-violet-900"}`}>
+                        {roleLabel(r.role)}
+                        {r.sport ? ` (${r.sport})` : ""}
+                        {r.isSuspicious && " ⚠️"}
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                        ยังไม่เช็ก
+                      </span>
+                    )}
+                    {r && <><span className="font-medium tabular-nums text-slate-600">เวลา {formatWallClockTime(r.checkedInAt, true)}</span>{r.source === "staff" && <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 font-semibold text-sky-800"><PencilLine aria-hidden="true" size={13} />ครูบันทึกแทน{r.staff?.displayName ? ` · ${r.staff.displayName}` : ""}</span>}</>}
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     {!r && pick.length > 0 && (
-                      <SheetTrigger className="order-last inline-flex min-h-11 items-center justify-center rounded-xl bg-violet-700 px-4 text-sm font-semibold text-white hover:bg-violet-800" label="บันทึกแทน" title={`เลขที่ ${s.number ?? "—"} · ${s.prefix ?? ""}${s.firstName} ${s.lastName}`} subtitle="บันทึกแทนนักเรียนที่ยังไม่ได้เช็กชื่อ">
+                      <SheetTrigger className="inline-flex min-h-11 items-center justify-center rounded-xl bg-violet-700 px-4 text-sm font-semibold text-white hover:bg-violet-800" label="บันทึกแทน" title={`เลขที่ ${s.number ?? "—"} · ${s.prefix ?? ""}${s.firstName} ${s.lastName}`} subtitle="บันทึกแทนนักเรียนที่ยังไม่ได้เช็กชื่อ">
                         <div className="grid gap-4">
                           {pick.map((x) => (
                       <form action={manualRecord} key={x.id} className="grid gap-2">
@@ -129,25 +145,12 @@ export default async function Room({
                       </SheetTrigger>
                     )}
                     {r && (
-                      <SheetTrigger label="จัดการ" title={`เลขที่ ${s.number ?? "—"} · ${s.prefix ?? ""}${s.firstName} ${s.lastName}`} subtitle={`${roleLabel(r.role)}${r.sport ? ` (${r.sport})` : ""} · เวลา ${formatWallClockTime(r.checkedInAt, true)}`} className="order-last inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+                      <SheetTrigger label="จัดการ" title={`เลขที่ ${s.number ?? "—"} · ${s.prefix ?? ""}${s.firstName} ${s.lastName}`} subtitle={`${roleLabel(r.role)}${r.sport ? ` (${r.sport})` : ""} · เวลา ${formatWallClockTime(r.checkedInAt, true)}`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50">
                         <RecordEditor record={r} isAdmin={session.role === "admin"} reviewerName={r.reviewRequestedBy ? reviewers.get(r.reviewRequestedBy) ?? null : null} />
                       </SheetTrigger>
                     )}
-                    {r ? (
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${r.isSuspicious ? "bg-amber-100 text-amber-900" : "bg-violet-100 text-violet-900"}`}>
-                        {roleLabel(r.role)}
-                        {r.sport ? ` (${r.sport})` : ""}
-                        {r.isSuspicious && " ⚠️"}
-                      </span>
-                    ) : (
-                      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
-                        ยังไม่เช็ก
-                      </span>
-                    )}
                   </div>
                 </div>
-
-                {r && <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-medium tabular-nums text-slate-600">เวลา {formatWallClockTime(r.checkedInAt, true)}</span>{r.source === "staff" && <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 font-semibold text-sky-800"><PencilLine aria-hidden="true" size={13} />ครูบันทึกแทน{r.staff?.displayName ? ` · ${r.staff.displayName}` : ""}</span>}</div>}
 
                 {isAdmin && r?.suspicionReasons && (
                   <div className="rounded-lg bg-amber-50 p-2 text-xs text-amber-900 break-words">
@@ -177,6 +180,7 @@ export default async function Room({
                   </form>
                 )}
 
+                </div>
               </article>
             );
           })}
