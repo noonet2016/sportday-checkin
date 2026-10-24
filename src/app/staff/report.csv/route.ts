@@ -4,16 +4,17 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { formatDateInput } from "@/lib/time";
 import { allowedRooms } from "@/lib/staff-access";
+import { studentNameFilter } from "@/lib/student-search";
 
 export async function GET(request: NextRequest) {
   const session = await getSession("staff");
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
   const rooms = await allowedRooms(session);
-  const room = request.nextUrl.searchParams.get("room");
+  const search = request.nextUrl.searchParams.get("q") ?? undefined;
   const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
 
   const students = await prisma.student.findMany({
-    where: { house: "purple", ...scope, ...(room ? { room } : {}) },
+    where: { house: "purple", ...scope, ...studentNameFilter(search) },
     select: { studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, program: true, id: true },
     orderBy: [{ classLevel: "asc" }, { room: "asc" }, { number: "asc" }]
   });

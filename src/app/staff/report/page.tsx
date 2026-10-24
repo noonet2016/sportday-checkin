@@ -5,11 +5,12 @@ import { getSession } from "@/lib/session";
 import { formatDateInput } from "@/lib/time";
 import StaffNav from "../StaffNav";
 import { allowedRooms } from "@/lib/staff-access";
+import { studentNameFilter } from "@/lib/student-search";
 export const dynamic = "force-dynamic";
-export default async function Report({ searchParams }: { searchParams: Promise<{ room?: string }> }) {
-  const session = await getSession("staff"); if (!session) redirect("/staff/login"); const rooms = await allowedRooms(session); const { room } = await searchParams; const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
+export default async function Report({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const session = await getSession("staff"); if (!session) redirect("/staff/login"); const rooms = await allowedRooms(session); const { q } = await searchParams; const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
   const [students, days] = await Promise.all([
-    prisma.student.findMany({ where: { house: "purple", ...scope, ...(room ? { room } : {}) }, select: { id: true, studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, program: true }, orderBy: [{ classLevel: "asc" }, { room: "asc" }, { number: "asc" }] }),
+    prisma.student.findMany({ where: { house: "purple", ...scope, ...studentNameFilter(q) }, select: { id: true, studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, program: true }, orderBy: [{ classLevel: "asc" }, { room: "asc" }, { number: "asc" }] }),
     prisma.eventDay.findMany({ include: { slots: { select: { id: true, period: true }, orderBy: { period: "asc" } } }, orderBy: { date: "asc" } })
   ]);
   const ids = students.map(s => s.id);
@@ -27,9 +28,10 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
         <h1>รายงานการเช็กชื่อ</h1>
         <p>เกณฑ์ผ่าน: เข้าร่วมอย่างน้อย {Math.round(PASS_RATIO * 100)}% ({Math.ceil(PASS_RATIO * allSlots.length)}/{allSlots.length} ครั้ง) · ผ่าน <b className="text-emerald-700">{passedCount}</b> · ไม่ผ่าน <b className="text-red-700">{students.length - passedCount}</b> จาก {students.length} คน</p>
         <form>
-          <label>ห้อง<input name="room" defaultValue={room ?? ""} placeholder="ทุกห้อง" /></label>
-          <button className="primary">กรอง</button>
-          <a className="secondary" href={`/staff/report.csv${room ? `?room=${encodeURIComponent(room)}` : ""}`}>ดาวน์โหลด CSV</a>
+          <label>ค้นหานักเรียน<input name="q" type="search" defaultValue={q ?? ""} placeholder="ชื่อ นามสกุล หรือเลขประจำตัว" /></label>
+          <button className="primary">ค้นหา</button>
+          {q && <a className="secondary" href="/staff/report">ล้างการค้นหา</a>}
+          <a className="secondary" href={`/staff/report.csv${q ? `?q=${encodeURIComponent(q)}` : ""}`}>ดาวน์โหลด CSV</a>
         </form>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
