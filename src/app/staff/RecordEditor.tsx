@@ -1,7 +1,8 @@
-import { cancelRecord, editRecord } from "@/app/staff/actions";
+import { cancelRecord, deleteRecord, editRecord } from "@/app/staff/actions";
+import ConfirmSubmit from "@/app/_components/ConfirmSubmit";
 import RoleSportFields from "./RoleSportFields";
 import ChoiceWithOther from "@/app/_components/ChoiceWithOther";
-import { ONBEHALF_REASON_OPTIONS } from "@/lib/event";
+import { DELETE_REASON_OPTIONS, ONBEHALF_REASON_OPTIONS } from "@/lib/event";
 
 type EditableRecord = { id: number; role: string; sport: string | null; note: string | null; source: string; staff: { displayName: string } | null };
 
@@ -31,7 +32,15 @@ export default function RecordEditor({ record, isAdmin }: { record: EditableReco
           {isStaffRecord && (
             <form action={cancelRecord} className="mt-2">
               <input type="hidden" name="recordId" value={record.id} />
-              <button className="w-full rounded-lg bg-red-600 px-3 py-2 font-semibold text-white hover:bg-red-700">ยกเลิกการบันทึกแทน</button>
+              <ConfirmSubmit label="ยกเลิกการบันทึกแทน" title="ยกเลิกการบันทึกแทน?" message="นักเรียนคนนี้จะกลับเป็น “ยังไม่เช็ค” ในรอบนี้" confirmLabel="ยืนยันยกเลิก" className="w-full rounded-lg bg-red-600 px-3 py-2 font-semibold text-white hover:bg-red-700" />
+            </form>
+          )}
+          {isAdmin && (
+            <form action={deleteRecord} className="mt-3 grid gap-2 rounded-lg border border-red-200 bg-red-50 p-2">
+              <input type="hidden" name="recordId" value={record.id} />
+              <p className="text-xs font-semibold text-red-800">🗑️ ลบรายการ (ผู้ดูแลระบบ) — นักเรียนจะกลับเป็น “ยังไม่เช็ค” และร้อยละ/สถานะผ่านอาจเปลี่ยน</p>
+              <ChoiceWithOther name="reason" options={DELETE_REASON_OPTIONS} placeholder="เลือกเหตุผลที่ลบ" otherPlaceholder="พิมพ์เหตุผล (อย่างน้อย 3 ตัวอักษร)" maxLength={500} />
+              <ConfirmSubmit label="ลบรายการ" title="ลบรายการเช็คชื่อนี้?" message="รายการจะถูกลบ นักเรียนกลับเป็น “ยังไม่เช็ค” ในรอบนี้ ระบบเก็บสำเนาและเหตุผลไว้ในบันทึกการตรวจสอบ" confirmLabel="ยืนยันลบ" className="rounded-lg bg-red-600 px-3 py-2 font-semibold text-white hover:bg-red-700" />
             </form>
           )}
         </details>

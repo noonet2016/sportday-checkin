@@ -8,6 +8,8 @@ export const roleCsvLabel = (role: string): string => role === "compete" ? "แ�
 export const SPORT_OPTIONS = ["ฟุตบอล", "ฟุตซอล", "วอลเลย์บอล", "บาสเกตบอล", "แบดมินตัน", "เทเบิลเทนนิส", "เซปักตะกร้อ", "แฮนด์บอล", "กรีฑา", "เปตอง"] as const;
 /** Common reasons a teacher records a check-in on a student's behalf; anything else goes through "อื่น ๆ". */
 export const ONBEHALF_REASON_OPTIONS = ["ลืมเช็คชื่อ", "ไม่ได้นำโทรศัพท์มา", "แบตเตอรี่โทรศัพท์หมด", "โทรศัพท์ไม่มีอินเทอร์เน็ต", "GPS ใช้งานไม่ได้", "ไม่มีโทรศัพท์มือถือ", "ช่วยงานกิจกรรม / ทำหน้าที่อื่น"] as const;
+/** Why an admin deletes a check-in record (stored in the audit log with a snapshot of the record). */
+export const DELETE_REASON_OPTIONS = ["ยืนยันว่าใช้ GPS ปลอม / ไม่ได้อยู่ในโรงเรียนจริง", "บันทึกผิดคน", "บันทึกผิดรอบ", "รายการซ้ำหรือผิดพลาด"] as const;
 /** Pass rule (Trainer, 2026-10-24): attend at least 80% of all event slots. */
 export const PASS_RATIO = 0.8;
 export const attendancePercent = (attended: number, totalSlots: number): number => totalSlots > 0 ? Math.round((attended / totalSlots) * 100) : 0;

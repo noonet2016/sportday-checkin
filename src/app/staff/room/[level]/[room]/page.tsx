@@ -11,7 +11,7 @@ import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { parseDateInput, formatWallClockTime, formatDateInput, formatThaiDate, nowInBangkok } from "@/lib/time";
-import { manualRecord, clearFlag, deleteRecord } from "@/app/staff/actions";
+import { manualRecord, clearFlag } from "@/app/staff/actions";
 import { allowedRooms, roomAllowed } from "@/lib/staff-access";
 
 export const dynamic = "force-dynamic";
@@ -182,12 +182,6 @@ export default async function Room({
                   </form>
                 )}
 
-                {r && session.role === "admin" && (
-                  <form action={deleteRecord} className="mt-1">
-                    <input type="hidden" name="recordId" value={r.id} />
-                    <button className="secondary py-1.5 px-3 text-sm text-rose-700 hover:bg-rose-50">ลบรายการ</button>
-                  </form>
-                )}
               </article>
             );
           })}
@@ -255,12 +249,6 @@ export default async function Room({
                         <form action={clearFlag} className="mb-1">
                           <input type="hidden" name="recordId" value={r.id} />
                           <button className="secondary">ล้างธง</button>
-                        </form>
-                      )}
-                      {r && session.role === "admin" && (
-                        <form action={deleteRecord}>
-                          <input type="hidden" name="recordId" value={r.id} />
-                          <button className="secondary">ลบรายการ</button>
                         </form>
                       )}
                     </td>

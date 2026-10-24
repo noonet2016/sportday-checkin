@@ -111,9 +111,16 @@ export async function clearCheckinFlag(input: { staffId: number; role: string; r
     await tx.checkinRecord.update({ where: { id: input.recordId }, data: { isSuspicious: false, suspicionReasons: null } }); await writeAudit(tx, `staff:${input.staffId}`, "checkin_flag_cleared", "CheckinRecord", String(input.recordId)); });
 }
 
-export async function deleteCheckinRecord(input: { staffId: number; role: string; recordId: number }): Promise<void> {
+export async function deleteCheckinRecord(input: { staffId: number; role: string; recordId: number; reason: string }): Promise<void> {
   if (input.role !== "admin") throw new Error("ต้องใช้สิทธิ์ผู้ดูแลระบบ");
   if (!Number.isSafeInteger(input.recordId)) throw new Error("ข้อมูลรายการไม่ถูกต้อง");
-  await prisma.$transaction(async tx => { const record = await tx.checkinRecord.findUnique({ where: { id: input.recordId }, select: { id: true, studentId: true, slotId: true } }); if (!record) throw new Error("ไม่พบรายการเช็คชื่อ");
-    await writeAudit(tx, `admin:${input.staffId}`, "checkin_deleted", "CheckinRecord", String(input.recordId), { studentId: record.studentId, slotId: record.slotId }); await tx.checkinRecord.delete({ where: { id: input.recordId } }); });
+  const reason = (input.reason ?? "").trim();
+  if (reason.length < 3 || reason.length > 500) throw new Error("กรุณาระบุเหตุผลที่ลบรายการ (3–500 ตัวอักษร)");
+  await prisma.$transaction(async tx => {
+    const record = await tx.checkinRecord.findUnique({ where: { id: input.recordId }, select: { id: true, studentId: true, slotId: true, role: true, sport: true, source: true, staffId: true, note: true, lat: true, lng: true, accuracy: true, isSuspicious: true, suspicionReasons: true, checkedInAt: true } });
+    if (!record) throw new Error("ไม่พบรายการเช็คชื่อ");
+    // The row is gone after this, so the audit entry keeps the reason and a full snapshot for later review.
+    await writeAudit(tx, `admin:${input.staffId}`, "checkin_deleted", "CheckinRecord", String(input.recordId), { reason, record: { ...record, checkedInAt: record.checkedInAt.toISOString() } });
+    await tx.checkinRecord.delete({ where: { id: input.recordId } });
+  });
 }

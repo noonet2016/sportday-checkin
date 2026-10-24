@@ -113,9 +113,13 @@ async function main() {
     await clearCheckinFlag({ staffId: admin.id, role: "admin", recordId: clearTarget.id });
     const cleared = await prisma.checkinRecord.findUnique({ where: { id: clearTarget.id }, select: { isSuspicious: true, suspicionReasons: true } });
     await check("admin clear-flag updates record and writes audit", async () => cleared?.isSuspicious === false && cleared.suspicionReasons === null && Boolean(await prisma.auditLog.findFirst({ where: { actor: `staff:${admin.id}`, action: "checkin_flag_cleared", targetId: String(clearTarget.id) } })));
-    const deniedDelete = await deleteCheckinRecord({ staffId: staff.id, role: "staff", recordId: clearTarget.id }).then(() => false, () => true);
+    const deniedDelete = await deleteCheckinRecord({ staffId: staff.id, role: "staff", recordId: clearTarget.id, reason: "บันทึกผิดคน" }).then(() => false, () => true);
     await check("staff non-admin delete rejects and preserves record", async () => deniedDelete && Boolean(await prisma.checkinRecord.findUnique({ where: { id: clearTarget.id } })));
-    await deleteCheckinRecord({ staffId: admin.id, role: "admin", recordId: clearTarget.id });
+    const noReason = await deleteCheckinRecord({ staffId: admin.id, role: "admin", recordId: clearTarget.id, reason: " " }).then(() => false, () => true);
+    await check("admin delete without a reason is rejected and keeps the record", async () => noReason && Boolean(await prisma.checkinRecord.findUnique({ where: { id: clearTarget.id } })));
+    await deleteCheckinRecord({ staffId: admin.id, role: "admin", recordId: clearTarget.id, reason: "ยืนยันว่าใช้ GPS ปลอม / ไม่ได้อยู่ในโรงเรียนจริง" });
+    const delAudit = await prisma.auditLog.findFirst({ where: { action: "checkin_deleted", targetId: String(clearTarget.id) }, orderBy: { id: "desc" } });
+    await check("admin delete audit keeps reason and record snapshot", async () => JSON.stringify(delAudit?.detail ?? {}).includes("GPS ปลอม") && JSON.stringify(delAudit?.detail ?? {}).includes("checkedInAt"));
     await check("admin delete removes record and writes audit", async () => !await prisma.checkinRecord.findUnique({ where: { id: clearTarget.id } }) && Boolean(await prisma.auditLog.findFirst({ where: { actor: `admin:${admin.id}`, action: "checkin_deleted", targetId: String(clearTarget.id) } })));
     stage = "staff edit / cancel of on-behalf records";
     const editOwn = await updateStaffRecord({ staffId: staff.id, isAdmin: false, allowedRooms: staffScope, recordId: staffRow!.id, role: "compete", sport: "ฟุตบอล", reason: "แก้บทบาทหลังบันทึก" });

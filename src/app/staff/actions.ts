@@ -55,7 +55,7 @@ export async function clearFlag(form: FormData) {
 export async function deleteRecord(form: FormData) {
   const actor = await requireStaff(true); const id = Number(form.get("recordId"));
   if (!Number.isSafeInteger(id)) throw new Error("ข้อมูลรายการไม่ถูกต้อง");
-  await deleteCheckinRecord({ staffId: Number(actor.id), role: actor.role, recordId: id }); revalidatePath("/staff"); revalidatePath("/staff/report");
+  await deleteCheckinRecord({ staffId: Number(actor.id), role: actor.role, recordId: id, reason: String(form.get("reason") ?? "") }); revalidatePath("/staff"); revalidatePath("/staff/report");
 }
 
 export async function saveSettings(form: FormData) {
