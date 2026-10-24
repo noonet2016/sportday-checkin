@@ -1,4 +1,5 @@
 import { cancelRecord, editRecord } from "@/app/staff/actions";
+import RoleSportFields from "./RoleSportFields";
 
 type EditableRecord = { id: number; role: string; sport: string | null; note: string | null; source: string; staff: { displayName: string } | null };
 
@@ -19,13 +20,7 @@ export default function RecordEditor({ record, isAdmin }: { record: EditableReco
           <summary className="cursor-pointer font-semibold text-violet-700">✏️ แก้ไขรายการนี้</summary>
           <form action={editRecord} className="mt-2 grid gap-2">
             <input type="hidden" name="recordId" value={record.id} />
-            <div className="grid grid-cols-2 gap-2">
-              <select name="role" defaultValue={record.role} className="rounded-lg border border-slate-300 bg-white p-2 text-sm text-slate-900">
-                <option value="compete">🏃 แข่งกีฬา</option>
-                <option value="cheer">📣 เชียร์</option>
-              </select>
-              <input name="sport" defaultValue={record.sport ?? ""} placeholder="กีฬา (ถ้าแข่ง)" className="rounded-lg border border-slate-300 p-2 text-sm" />
-            </div>
+            <RoleSportFields defaultRole={record.role} defaultSport={record.sport ?? ""} />
             <input name="reason" required minLength={3} maxLength={500} defaultValue={isStaffRecord ? record.note ?? "" : ""} placeholder={isStaffRecord ? "เหตุผลที่บันทึกแทน" : "เหตุผลที่แก้ไข"} className="rounded-lg border border-slate-300 p-2 text-sm" />
             <button className="rounded-lg bg-violet-700 px-3 py-2 font-semibold text-white hover:bg-violet-800">บันทึกการแก้ไข</button>
           </form>

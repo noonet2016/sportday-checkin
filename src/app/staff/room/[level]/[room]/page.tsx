@@ -2,6 +2,7 @@ import { periodLabel, roleLabel } from "@/lib/event";
 import Link from "next/link";
 import StaffNav from "../../../StaffNav";
 import RecordEditor from "../../../RecordEditor";
+import RoleSportFields from "../../../RoleSportFields";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -125,13 +126,7 @@ export default async function Room({
                         <input type="hidden" name="studentId" value={s.id} />
                         <input type="hidden" name="slotId" value={x.id} />
                         <div className="text-xs font-semibold text-slate-700">บันทึกแทนรอบ {periodLabel(x.period)}</div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <select name="role" className="rounded-lg border border-slate-300 p-2 text-sm bg-white text-slate-900">
-                            <option value="compete">🏃 แข่งกีฬา</option>
-                            <option value="cheer">📣 เชียร์</option>
-                          </select>
-                          <input name="sport" placeholder="กีฬา (ถ้าแข่ง)" className="rounded-lg border border-slate-300 p-2 text-sm" />
-                        </div>
+                        <RoleSportFields />
                         <input name="reason" required minLength={3} placeholder="เหตุผลที่บันทึกแทน" className="rounded-lg border border-slate-300 p-2 text-sm" />
                         <button className="secondary py-2 text-sm">บันทึกแทน</button>
                       </form>
@@ -209,11 +204,7 @@ export default async function Room({
                           <input type="hidden" name="studentId" value={s.id} />
                           <input type="hidden" name="slotId" value={x.id} />
                           <span className="text-xs font-semibold">{periodLabel(x.period)}</span>
-                          <select name="role">
-                            <option value="compete">🏃 แข่งกีฬา</option>
-                            <option value="cheer">📣 เชียร์</option>
-                          </select>
-                          <input name="sport" placeholder="กีฬา (ถ้าแข่ง)" />
+                          <RoleSportFields className="grid gap-1" />
                           <input name="reason" required minLength={3} placeholder="เหตุผลที่บันทึกแทน" />
                           <button className="secondary">บันทึก</button>
                         </form>
