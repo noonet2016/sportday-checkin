@@ -32,3 +32,18 @@ test("scores exact centroid and static GPS samples as suspicious", () => {
   const naturalSamples = [sample(13.7563, 100.5018), sample(13.75631, 100.50181), sample(13.75632, 100.50182)];
   assert.equal(scoreSuspicion(naturalSamples, 13.75633, 100.50183, center).suspicious, false);
 });
+
+test("DEV_NOW is honored only outside production", async () => {
+  const { serverNow } = await import("../src/lib/time");
+  const before = { node: process.env.NODE_ENV, override: process.env.DEV_NOW };
+  try {
+    process.env.DEV_NOW = "2026-10-26T08:30:00";
+    Reflect.set(process.env, "NODE_ENV", "development");
+    assert.equal(serverNow().toISOString(), "2026-10-26T08:30:00.000Z");
+    Reflect.set(process.env, "NODE_ENV", "production");
+    assert.notEqual(serverNow().toISOString(), "2026-10-26T08:30:00.000Z");
+  } finally {
+    if (before.node === undefined) Reflect.deleteProperty(process.env, "NODE_ENV"); else Reflect.set(process.env, "NODE_ENV", before.node);
+    if (before.override === undefined) delete process.env.DEV_NOW; else process.env.DEV_NOW = before.override;
+  }
+});

@@ -13,6 +13,13 @@
 //     `timeZone: "Asia/Bangkok"`.
 export const BANGKOK_TZ = "Asia/Bangkok";
 
+/** Server clock; DEV_NOW is deliberately ignored in production. The value is a Bangkok wall-clock ISO. */
+export function serverNow(): Date {
+  const override = process.env.NODE_ENV !== "production" ? process.env.DEV_NOW : undefined;
+  if (override) { const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(override); if (match) return new Date(Date.UTC(Number(match[1]), Number(match[2])-1, Number(match[3]), Number(match[4]), Number(match[5]), Number(match[6]??0))); }
+  return new Date();
+}
+
 /** The real current instant's Bangkok-local y/m/d/h/m/s, and two Date encodings of it. */
 export function nowInBangkok(): { dateOnly: Date; hms: string; wallClock: Date } {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -24,7 +31,7 @@ export function nowInBangkok(): { dateOnly: Date; hms: string; wallClock: Date }
     minute: "2-digit",
     second: "2-digit",
     hour12: false,
-  }).formatToParts(new Date());
+  }).formatToParts(serverNow());
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
   const y = Number(get("year"));
   const mo = Number(get("month")) - 1;
