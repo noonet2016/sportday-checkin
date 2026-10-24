@@ -71,7 +71,7 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
           {basemap === "street" ? "🛰️ ดาวเทียม" : "🗺️ แผนที่"}
         </button>
       </div>
-      <button type="button" onClick={useCurrentPosition} className="w-full rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 transition-colors hover:bg-cyan-500/20">
+      <button type="button" onClick={useCurrentPosition} disabled={locating} className="w-full rounded-lg bg-sky-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:cursor-wait disabled:bg-sky-400">
         {locating ? "กำลังค้นหาตำแหน่ง…" : "📍 ดึงตำแหน่งปัจจุบัน"}
       </button>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
