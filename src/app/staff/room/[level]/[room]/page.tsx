@@ -3,6 +3,7 @@ import Link from "next/link";
 import StaffNav from "../../../StaffNav";
 import SlotBar from "../../../ui/SlotBar";
 import RecordEditor from "../../../RecordEditor";
+import RoomFilters from "../../RoomFilters";
 import RoleSportFields from "../../../RoleSportFields";
 import ChoiceWithOther from "@/app/_components/ChoiceWithOther";
 import { ONBEHALF_REASON_OPTIONS } from "@/lib/event";
@@ -80,27 +81,28 @@ export default async function Room({
     <main className="screen pb-24 md:pb-6" style={{ maxWidth: "76rem", alignContent: "start" }}>
       <StaffNav active="home" />
       <SlotBar day={date ? formatDateInput(date) : ""} period={period === "afternoon" ? "afternoon" : "morning"} updatedAt={formatWallClockTime(nowWall)} hrefBase={roomBase}/>
-      <section className="card">
+      <section className="card rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1>{level}/{room} · {students.length} คน</h1>
-          <Link href={`/staff${day ? `?day=${encodeURIComponent(day)}&period=${period === "afternoon" ? "afternoon" : "morning"}` : ""}`}>
-            ← กลับ
+          <h1 className="text-xl font-bold text-slate-950">{level}/{room} · {students[0]?.program ?? "ทั่วไป"}</h1>
+          <Link className="min-h-11 inline-flex items-center font-semibold text-violet-800" href={`/staff${day ? `?day=${encodeURIComponent(day)}&period=${period === "afternoon" ? "afternoon" : "morning"}` : ""}`}>
+            ← ภาพรวม
           </Link>
         </div>
-        {slot && !viewedStarted && <p className="notice">รอบนี้ยังไม่ถึงเวลา — ดูรายชื่อได้ แต่บันทึกแทนได้หลังเปิดรอบแล้วเท่านั้น</p>}
+        <div className="my-3 grid grid-cols-3 gap-2 text-center"><div className="rounded-xl bg-emerald-50 p-2"><b className="block text-lg text-emerald-800">{records.length}</b><span className="text-xs text-slate-700">เช็กแล้ว</span></div><div className="rounded-xl bg-amber-50 p-2"><b className="block text-lg text-amber-900">{missingCount}</b><span className="text-xs text-slate-700">ยังไม่เช็ก</span></div><div className="rounded-xl bg-rose-50 p-2"><b className="block text-lg text-rose-800">{records.filter(r => r.isSuspicious).length}</b><span className="text-xs text-slate-700">ติดธง</span></div></div>
+        {slot && !viewedStarted && <p className="rounded-xl bg-slate-100 p-3 font-semibold text-slate-800">🔒 ยังไม่ถึงเวลารอบนี้ — ดูได้อย่างเดียว</p>}
         {slot && viewedIsPast && <p className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900">🕘 รอบนี้ผ่านไปแล้ว — บันทึกแทนที่นี่จะเป็นการ<b>บันทึกย้อนหลัง</b></p>}
         {slot && <p className="text-sm text-slate-700">{formatThaiDate(slot.opensAt, { year: true })} รอบ{periodLabel(slot.period)} · ยังไม่เช็ค <b className="text-red-700">{missingCount}</b> คน{missingCount > 0 ? " — กดบันทึกแทนได้ที่แถวของนักเรียนคนนั้น" : ""}</p>}
 
-        {/* Mobile (<640px): one card per student */}
-        <div className="space-y-3 sm:hidden">
+        <RoomFilters counts={{ missing: missingCount, checked: records.length - records.filter(r => r.isSuspicious).length, flagged: records.filter(r => r.isSuspicious).length, all: students.length }} defaultFilter={slot && viewedStarted && !viewedIsPast ? "missing" : "all"}/>
+        <div className="divide-y divide-slate-200">
           {students.map((s) => {
             const r = map.get(s.id);
             return (
-              <article key={s.id} className="rounded-xl border border-violet-100 bg-white p-4 shadow-sm flex flex-col gap-2.5">
+              <article key={s.id} data-student-status={r ? r.isSuspicious ? "flagged" : "checked" : "missing"} hidden={Boolean(slot && viewedStarted && !viewedIsPast && r && !r.isSuspicious)} className="flex min-h-16 flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="font-bold text-slate-900 break-words">
-                    <span className="mr-2 inline-block rounded-md bg-slate-100 px-1.5 text-sm text-slate-700">เลขที่ {s.number ?? "—"}</span>
-                    <span className="font-mono text-sm text-violet-700 mr-2">{s.studentCode}</span>
+                    <span className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-sm text-slate-700">{s.number ?? "—"}</span>
+                    <span className="font-mono text-sm text-slate-500 mr-2">รหัส {s.studentCode}</span>
                     {s.prefix ?? ""}{s.firstName} {s.lastName}
                   </div>
                   <div>
@@ -173,8 +175,7 @@ export default async function Room({
           })}
         </div>
 
-        {/* Desktop (>=640px): table view */}
-        <div className="hidden sm:block overflow-x-auto">
+        <div className="hidden">
           <table className="w-full text-left">
             <thead>
               <tr>
