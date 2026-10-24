@@ -4,6 +4,11 @@ export type EventPeriod = (typeof EVENT_PERIODS)[number];
 export const periodLabel = (period: string): string => period === "morning" ? "เช้า" : "บ่าย";
 export const roleLabel = (role: string): string => role === "compete" ? "🏃 แข่งกีฬา" : "📣 เชียร์";
 export const roleCsvLabel = (role: string): string => role === "compete" ? "แข่งกีฬา" : "เชียร์";
+/** Pass rule (Trainer, 2026-10-24): attend at least 80% of all event slots. */
+export const PASS_RATIO = 0.8;
+export const attendancePassed = (attended: number, totalSlots: number): boolean => totalSlots > 0 && attended / totalSlots >= PASS_RATIO;
+/** Slot columns in time order (Prisma's orderBy period sorts "afternoon" before "morning"). */
+export const periodOrder = (period: string): number => period === "morning" ? 0 : 1;
 export type SlotState = { state: "not-event-day" } | { state: "before" | "open" | "closed"; period: EventPeriod; opensAt: Date; closesAt: Date };
 
 const schedule: Record<EventPeriod, readonly [number, number]> = { morning: [8, 10], afternoon: [13, 14] };

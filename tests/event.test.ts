@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EVENT_DATES, resolveSlotWindow } from "../src/lib/event";
+import { attendancePassed, EVENT_DATES, resolveSlotWindow } from "../src/lib/event";
 import { haversineDistance } from "../src/lib/geo";
 import { scoreSuspicion, type CheckinGpsSample } from "../src/lib/spoof";
 
@@ -62,4 +62,11 @@ test("room sorting compares class and room numerically", async () => {
   const rooms = ["1/15", "1/4", "4/11", "4/5", "6/12", "6/6"];
   const sorted = rooms.map(value => { const [classLevel, room] = value.split("/"); return { value, classLevel, room }; }).sort(compareRooms).map(x => x.value);
   assert.deepEqual(sorted, ["1/4", "1/15", "4/5", "4/11", "6/6", "6/12"]);
+});
+
+test("attendancePassed uses the 80% rule over all slots", () => {
+  assert.equal(attendancePassed(8, 10), true);
+  assert.equal(attendancePassed(7, 10), false);
+  assert.equal(attendancePassed(10, 10), true);
+  assert.equal(attendancePassed(0, 0), false);
 });

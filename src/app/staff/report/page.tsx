@@ -1,4 +1,4 @@
-import { compareRooms, periodLabel, roleLabel } from "@/lib/event";
+import { attendancePassed, compareRooms, PASS_RATIO, periodLabel, periodOrder, roleLabel } from "@/lib/event";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -16,11 +16,16 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
   const records = ids.length ? await prisma.checkinRecord.findMany({ where: { studentId: { in: ids } }, select: { studentId: true, slotId: true, role: true } }) : [];
   const map = new Map(records.map(r => [`${r.studentId}:${r.slotId}`, r]));
   students.sort(compareRooms);
+  days.forEach(d => d.slots.sort((a, b) => periodOrder(a.period) - periodOrder(b.period)));
+  const allSlots = days.flatMap(d => d.slots);
+  const attendedOf = (studentId: number) => allSlots.filter(slot => map.has(`${studentId}:${slot.id}`)).length;
+  const passedCount = students.filter(s => attendancePassed(attendedOf(s.id), allSlots.length)).length;
   return (
     <main className="screen" style={{ maxWidth: "90rem", alignContent: "start" }}>
       <StaffNav active="report" />
       <section className="card">
         <h1>รายงานการเช็กชื่อ</h1>
+        <p>เกณฑ์ผ่าน: เข้าร่วมอย่างน้อย {Math.round(PASS_RATIO * 100)}% ({Math.ceil(PASS_RATIO * allSlots.length)}/{allSlots.length} ครั้ง) · ผ่าน <b className="text-emerald-700">{passedCount}</b> · ไม่ผ่าน <b className="text-red-700">{students.length - passedCount}</b> จาก {students.length} คน</p>
         <form>
           <label>ห้อง<input name="room" defaultValue={room ?? ""} placeholder="ทุกห้อง" /></label>
           <button className="primary">กรอง</button>
@@ -34,11 +39,13 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                 <th>ห้อง</th>
                 {days.flatMap(d => d.slots.map(s => <th key={s.id}>{formatDateInput(d.date)} {periodLabel(s.period)}</th>))}
                 <th>รวม</th>
+                <th>สถานะ</th>
               </tr>
             </thead>
             <tbody>
               {students.map(s => {
-                const done = days.flatMap(d => d.slots).filter(slot => map.has(`${s.id}:${slot.id}`)).length;
+                const done = attendedOf(s.id);
+                const passed = attendancePassed(done, allSlots.length);
                 return (
                   <tr key={s.id}>
                     <td>{s.studentCode} {s.prefix ?? ""}{s.firstName} {s.lastName}</td>
@@ -47,7 +54,8 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                       const r = map.get(`${s.id}:${slot.id}`);
                       return <td key={slot.id}>{r ? roleLabel(r.role) : "—"}</td>;
                     }))}
-                    <td>{done}/10</td>
+                    <td>{done}/{allSlots.length}</td>
+                    <td><span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-bold text-white ${passed ? "bg-emerald-600" : "bg-red-600"}`}>{passed ? "✅ ผ่าน" : "❌ ไม่ผ่าน"}</span></td>
                   </tr>
                 );
               })}

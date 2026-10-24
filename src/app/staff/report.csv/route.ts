@@ -1,4 +1,4 @@
-import { compareRooms, periodLabel, roleCsvLabel } from "@/lib/event";
+import { attendancePassed, compareRooms, periodLabel, periodOrder, roleCsvLabel } from "@/lib/event";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -27,10 +27,11 @@ export async function GET(request: NextRequest) {
   }) : [];
   const map = new Map(records.map(r => [`${r.studentId}:${r.slotId}`, r]));
   students.sort(compareRooms);
+  days.forEach(d => d.slots.sort((a, b) => periodOrder(a.period) - periodOrder(b.period)));
 
   const q = (x: unknown) => `"${String(x ?? "").replaceAll('"', '""')}"`;
   const rows: string[][] = [
-    ["รหัส", "ชื่อ", "ระดับ", "ห้อง", "โครงการ", ...days.flatMap(d => d.slots.map(s => `${formatDateInput(d.date)} ${periodLabel(s.period)}`)), "รวม"]
+    ["รหัส", "ชื่อ", "ระดับ", "ห้อง", "โครงการ", ...days.flatMap(d => d.slots.map(s => `${formatDateInput(d.date)} ${periodLabel(s.period)}`)), "รวม", "สถานะ"]
   ];
   for (const s of students) {
     const slots = days.flatMap(d => d.slots);
@@ -46,7 +47,8 @@ export async function GET(request: NextRequest) {
       s.room,
       s.program ?? "",
       ...vals,
-      `${count}/10`
+      `${count}/${slots.length}`,
+      attendancePassed(count, slots.length) ? "ผ่าน" : "ไม่ผ่าน"
     ]);
   }
   const csv = "\uFEFF" + rows.map(row => row.map(q).join(",")).join("\r\n");
