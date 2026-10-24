@@ -5,6 +5,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createSession, destroySession, requireStaff } from "@/lib/session";
 import { writeAudit } from "@/lib/audit";
+import { clearCheckinFlag, deleteCheckinRecord, staffRecordCheckin } from "@/lib/checkin-core";
+import { nowInBangkok } from "@/lib/time";
 
 export async function loginStaff(form: FormData) {
   const username = String(form.get("username") ?? "").trim().toLowerCase();
@@ -22,27 +24,21 @@ export async function manualRecord(form: FormData) {
   const studentId = Number(form.get("studentId")); const slotId = Number(form.get("slotId"));
   const role = String(form.get("role")); const reason = String(form.get("reason") ?? "").trim(); const sport = String(form.get("sport") ?? "").trim();
   if (!Number.isSafeInteger(studentId) || !Number.isSafeInteger(slotId) || !["compete", "cheer"].includes(role) || reason.length < 3 || reason.length > 500) throw new Error("Invalid manual check-in input");
-  await prisma.$transaction(async tx => {
-    const student = await tx.student.findFirst({ where: { id: studentId, house: "purple" }, select: { id: true } });
-    const slot = await tx.checkinSlot.findUnique({ where: { id: slotId }, select: { id: true } });
-    if (!student || !slot) throw new Error("Student or slot not found");
-    const record = await tx.checkinRecord.create({ data: { studentId, slotId, role, sport: role === "compete" && sport ? sport.slice(0, 100) : null, lat: 0, lng: 0, accuracy: 0, source: "staff", staffId: Number(actor.id), note: reason } });
-    await writeAudit(tx, `staff:${actor.id}`, "staff_checkin_created", "CheckinRecord", String(record.id), { studentId, slotId, role, reason });
-  }); revalidatePath("/staff"); revalidatePath("/staff/report");
+  const result = await staffRecordCheckin({ staffId: Number(actor.id), studentId, slotId, role, sport, reason, now: nowInBangkok().wallClock });
+  if (!result.ok) throw new Error(result.message);
+  revalidatePath("/staff"); revalidatePath("/staff/report");
 }
 
 export async function clearFlag(form: FormData) {
   const actor = await requireStaff(true); const id = Number(form.get("recordId"));
   if (!Number.isSafeInteger(id)) throw new Error("Invalid record");
-  await prisma.$transaction(async tx => { const record = await tx.checkinRecord.findUnique({ where: { id }, select: { id: true, isSuspicious: true } }); if (!record) throw new Error("Record not found");
-    await tx.checkinRecord.update({ where: { id }, data: { isSuspicious: false, suspicionReasons: null } }); await writeAudit(tx, `staff:${actor.id}`, "checkin_flag_cleared", "CheckinRecord", String(id)); }); revalidatePath("/staff");
+  await clearCheckinFlag({ staffId: Number(actor.id), role: actor.role, recordId: id }); revalidatePath("/staff");
 }
 
 export async function deleteRecord(form: FormData) {
   const actor = await requireStaff(true); const id = Number(form.get("recordId"));
   if (!Number.isSafeInteger(id)) throw new Error("Invalid record");
-  await prisma.$transaction(async tx => { const record = await tx.checkinRecord.findUnique({ where: { id }, select: { id: true, studentId: true, slotId: true } }); if (!record) throw new Error("Record not found");
-    await writeAudit(tx, `admin:${actor.id}`, "checkin_deleted", "CheckinRecord", String(id), { studentId: record.studentId, slotId: record.slotId }); await tx.checkinRecord.delete({ where: { id } }); }); revalidatePath("/staff"); revalidatePath("/staff/report");
+  await deleteCheckinRecord({ staffId: Number(actor.id), role: actor.role, recordId: id }); revalidatePath("/staff"); revalidatePath("/staff/report");
 }
 
 export async function saveSettings(form: FormData) {
