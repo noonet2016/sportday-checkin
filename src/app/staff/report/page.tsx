@@ -40,12 +40,14 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
             </label>
           )}
           <label>ค้นหานักเรียน<input name="q" type="search" defaultValue={q ?? ""} placeholder="ชื่อ นามสกุล หรือเลขประจำตัว" /></label>
-          <button className="primary">แสดงผล</button>
-          {(q || pickedKey) && <a className="secondary" href="/staff/report">ล้างตัวกรอง</a>}
-          <a className="secondary" href={`/staff/report.csv${csvQuery ? `?${csvQuery}` : ""}`}>ดาวน์โหลด CSV</a>
+          <div className="flex flex-wrap gap-2">
+            <button className="primary whitespace-nowrap">แสดงผล</button>
+            {(q || pickedKey) && <a className="secondary whitespace-nowrap" href="/staff/report">ล้างตัวกรอง</a>}
+            <a className="secondary whitespace-nowrap" href={`/staff/report.csv${csvQuery ? `?${csvQuery}` : ""}`}>ดาวน์โหลด CSV</a>
+          </div>
         </form>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full min-w-[72rem] text-left text-sm">
             <thead>
               <tr>
                 <th>นักเรียน</th>
@@ -63,7 +65,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                 const passed = attendancePassed(done, allSlots.length);
                 return (
                   <tr key={s.id}>
-                    <td>{s.studentCode} {s.prefix ?? ""}{s.firstName} {s.lastName}</td>
+                    <td className="whitespace-nowrap">{s.studentCode} {s.prefix ?? ""}{s.firstName} {s.lastName}</td>
                     <td>{s.classLevel}/{s.room} {s.program}</td>
                     <td>{s.number ?? "—"}</td>
                     {days.flatMap(d => d.slots.map(slot => {

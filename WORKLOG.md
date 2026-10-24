@@ -35,3 +35,4 @@
 - 09:53 Symboli Rudolf (Claude): Slot chips for future slots now '🔒 เช้า/บ่าย' (was '(ยังไม่ถึง)', wrapped on mobile) + legend.
 - 09:56 Symboli Rudolf (Claude): Paused by Trainer (break) — checkpoint in team worklog/2026-10-24.md 09:56. HEAD 1fbaf1d; dev server running with DEV_NOW=2026-10-28T16:00.
 - 15:17 Symboli Rudolf (Claude): Report room filter per Trainer: 'ห้อง' dropdown (rooms in caller's scope, numeric order, EP/SMTE label; hidden when only 1 room) + name search together; CSV honours ?room=&q= (filename includes room). roomFilter() in staff-access.ts only narrows scope. Verified: admin 15 options, 1/15 → 30 rows page+CSV; teacher1 tampering ?room=1|4 still gets only 2/14 (page + CSV). smoke 29/29.
+- 15:17 Symboli Rudolf (Claude): Report mobile layout: filter buttons in a wrapping row (no mid-word breaks); table min-width 72rem + nowrap names → horizontal scroll inside the card instead of squashing (page overflow 0).
