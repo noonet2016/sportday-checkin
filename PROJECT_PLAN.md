@@ -32,7 +32,7 @@ LINE LIFF check-in app for the school sports week (กีฬาสี): **purple
   - ~~Q2 roster~~ ✅ answered 2026-10-23: 14 Excel files (one per room) in `data/roster/` → combined `data/roster/purple-students.csv` = **503 students**, 14 rooms. Excel is the source of truth (Trainer). Room 1/15 & 3/15 = EP (English Program), 2/14 & 5/13 = SMTE (special science). Excel header row mislabels col2/col3 (`prefix`,`idstudent` swapped — data is id then prefix).
   - Q4 if "compete", record the sport name?
   - ~~Q5~~ ✅ 2026-10-24: each teacher sees ONLY assigned rooms (StaffRoom m2m); admin sees all + manages staff/rooms.
-  - Q6 what the result is used for (activity hours? pass/fail?) — shapes the report.
+  - ~~Q6~~ ✅ 2026-10-24: pass/fail — attend ≥80% of slots (8/10) → ผ่าน; shown on report + CSV.
 - LINE: reuse the `tnw-lineup` provider so existing lineup userIds match (needs a new LIFF app/endpoint on that channel — Trainer action in LINE Developers Console).
 - DB: local dev `sportday_dev` (Homebrew MariaDB) ✅ populated 2026-10-24. Prod DB + subdomain on Plesk — not created yet.
 - Real campus geofence (center + radius) — not set yet (smoke used fixture coords).
