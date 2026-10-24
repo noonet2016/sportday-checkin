@@ -34,22 +34,26 @@ model Student {
 }
 
 model Staff {
-  id             Int             @id @default(autoincrement())
-  username       String          @unique @db.VarChar(100)
-  passwordHash   String          @map("password_hash") @db.VarChar(255)
-  displayName    String          @map("display_name") @db.VarChar(150)
-  role           String          @default("staff") @db.VarChar(20) // admin | staff
-  createdAt      DateTime        @default(now()) @map("created_at") @db.DateTime(0)
-  updatedAt      DateTime        @updatedAt @map("updated_at") @db.DateTime(0)
-  checkinRecords CheckinRecord[]
-  rooms          StaffRoom[]
+  id              Int             @id @default(autoincrement())
+  username        String          @unique @db.VarChar(100)
+  passwordHash    String          @map("password_hash") @db.VarChar(255)
+  displayName     String          @map("display_name") @db.VarChar(150)
+  role            String          @default("staff") @db.VarChar(20) // admin | staff
+  // Optional LINE sign-in for staff (2026-10-25): bound once via username+password inside LIFF.
+  lineUserId      String?         @unique @map("line_user_id") @db.VarChar(64)
+  lineDisplayName String?         @map("line_display_name") @db.VarChar(150)
+  lineLinkedAt    DateTime?       @map("line_linked_at") @db.DateTime(0)
+  createdAt       DateTime        @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.DateTime(0)
+  checkinRecords  CheckinRecord[]
+  rooms           StaffRoom[]
 
   @@map("staff")
 }
 
 model StaffRoom {
-  staffId   Int    @map("staff_id")
-  staff     Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staffId    Int    @map("staff_id")
+  staff      Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
   classLevel String @map("class_level") @db.VarChar(30)
   room       String @db.VarChar(20)
 

@@ -152,3 +152,16 @@ export async function updateSlotTimes(_prev: SlotTimesResult, form: FormData): P
   revalidatePath("/staff"); revalidatePath("/staff/settings");
   return { ok: true, message: `บันทึกแล้ว ${changed.length} รอบ: ${changed.map(label).join(", ")}` };
 }
+
+/** Admin removes a staff account's LINE link (e.g. wrong LINE / new phone); password login is unaffected. */
+export async function unlinkStaffLine(form: FormData) {
+  const actor = await requireStaff(true); const id = Number(form.get("staffId"));
+  if (!Number.isSafeInteger(id)) throw new Error("ข้อมูลบัญชีไม่ถูกต้อง");
+  const staff = await prisma.staff.findUnique({ where: { id }, select: { lineUserId: true, lineDisplayName: true } });
+  if (!staff?.lineUserId) return;
+  await prisma.$transaction(async (tx) => {
+    await tx.staff.update({ where: { id }, data: { lineUserId: null, lineDisplayName: null, lineLinkedAt: null } });
+    await writeAudit(tx, `admin:${actor.id}`, "staff_line_unbound", "Staff", String(id), { lineDisplayName: staff.lineDisplayName });
+  });
+  revalidatePath("/staff/users");
+}
