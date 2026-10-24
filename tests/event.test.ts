@@ -47,3 +47,19 @@ test("DEV_NOW is honored only outside production", async () => {
     if (before.override === undefined) delete process.env.DEV_NOW; else process.env.DEV_NOW = before.override;
   }
 });
+
+test("default slot selects upcoming/current/last event slot", async () => {
+  const { resolveDefaultSlot } = await import("../src/lib/event");
+  const dates = ["2026-10-26", "2026-10-27"];
+  assert.deepEqual(resolveDefaultSlot(at("2026-10-24T12:00:00Z"), dates), { date: "2026-10-26", period: "morning" });
+  assert.deepEqual(resolveDefaultSlot(at("2026-10-26T08:30:00Z"), dates), { date: "2026-10-26", period: "morning" });
+  assert.deepEqual(resolveDefaultSlot(at("2026-10-26T11:00:00Z"), dates), { date: "2026-10-26", period: "afternoon" });
+  assert.deepEqual(resolveDefaultSlot(at("2026-10-27T15:00:00Z"), dates), { date: "2026-10-27", period: "afternoon" });
+});
+
+test("room sorting compares class and room numerically", async () => {
+  const { compareRooms } = await import("../src/lib/event");
+  const rooms = ["1/15", "1/4", "4/11", "4/5", "6/12", "6/6"];
+  const sorted = rooms.map(value => { const [classLevel, room] = value.split("/"); return { value, classLevel, room }; }).sort(compareRooms).map(x => x.value);
+  assert.deepEqual(sorted, ["1/4", "1/15", "4/5", "4/11", "6/6", "6/12"]);
+});

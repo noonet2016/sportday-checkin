@@ -1,6 +1,7 @@
 export const EVENT_DATES = ["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30"] as const;
 export const EVENT_PERIODS = ["morning", "afternoon"] as const;
 export type EventPeriod = (typeof EVENT_PERIODS)[number];
+export const periodLabel = (period: string): string => period === "morning" ? "เช้า" : "บ่าย";
 export type SlotState = { state: "not-event-day" } | { state: "before" | "open" | "closed"; period: EventPeriod; opensAt: Date; closesAt: Date };
 
 const schedule: Record<EventPeriod, readonly [number, number]> = { morning: [8, 10], afternoon: [13, 14] };
@@ -14,4 +15,22 @@ export function resolveSlotWindow(wallClock: Date, eventDates: readonly string[]
   if (current) return { state: "open", ...current };
   if (now < slots[0].opensAt.getTime()) return { state: "before", ...slots[0] };
   return { state: "closed", ...slots[slots.length - 1] };
+}
+
+/** Choose the current open event slot, otherwise the next slot, clamping before/after the event. */
+export function resolveDefaultSlot(wallClock: Date, eventDates: readonly string[] = EVENT_DATES): { date: string; period: EventPeriod } {
+  const slots = [...eventDates].sort().flatMap(date => EVENT_PERIODS.map(period => {
+    const [open, close] = schedule[period];
+    return { date, period, opensAt: Date.UTC(Number(date.slice(0,4)), Number(date.slice(5,7))-1, Number(date.slice(8,10)), open), closesAt: Date.UTC(Number(date.slice(0,4)), Number(date.slice(5,7))-1, Number(date.slice(8,10)), close) };
+  }));
+  const now = wallClock.getTime();
+  const selected = slots.find(slot => now >= slot.opensAt && now < slot.closesAt)
+    ?? slots.find(slot => slot.opensAt > now)
+    ?? slots[slots.length - 1];
+  return { date: selected.date, period: selected.period };
+}
+
+export function compareRooms(a: { classLevel: string; room: string }, b: { classLevel: string; room: string }): number {
+  const numericAware = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+  return numericAware.compare(a.classLevel, b.classLevel) || numericAware.compare(a.room, b.room);
 }

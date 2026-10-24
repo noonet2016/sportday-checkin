@@ -34,12 +34,14 @@ function numeric(value: string, fallback: number) {
 export default function MapPickerInner({ value, onChange, inputNames }: MapPickerProps) {
   const position = useMemo<[number, number]>(() => [value.lat, value.lng], [value.lat, value.lng]);
   const [basemap, setBasemap] = useState<"street" | "satellite">("street");
+  const [locating, setLocating] = useState(false);
 
   function useCurrentPosition() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || locating) return;
+    setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => onChange({ ...value, lat: position.coords.latitude, lng: position.coords.longitude }),
-      () => undefined,
+      (position) => { onChange({ ...value, lat: position.coords.latitude, lng: position.coords.longitude }); setLocating(false); },
+      () => setLocating(false),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
   }
@@ -70,17 +72,17 @@ export default function MapPickerInner({ value, onChange, inputNames }: MapPicke
         </button>
       </div>
       <button type="button" onClick={useCurrentPosition} className="w-full rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 transition-colors hover:bg-cyan-500/20">
-        📍 ดึงตำแหน่งปัจจุบัน
+        {locating ? "กำลังค้นหาตำแหน่ง…" : "📍 ดึงตำแหน่งปัจจุบัน"}
       </button>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <label className="text-xs text-slate-400">ละติจูด
-          <input name={inputNames?.lat} type="number" step="any" value={value.lat} onChange={(event) => onChange({ ...value, lat: numeric(event.target.value, value.lat) })} className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" />
+        <label className="text-xs font-semibold text-slate-700">ละติจูด
+          <input name={inputNames?.lat} type="number" step="any" value={value.lat} onChange={(event) => onChange({ ...value, lat: numeric(event.target.value, value.lat) })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500" />
         </label>
-        <label className="text-xs text-slate-400">ลองจิจูด
-          <input name={inputNames?.lng} type="number" step="any" value={value.lng} onChange={(event) => onChange({ ...value, lng: numeric(event.target.value, value.lng) })} className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" />
+        <label className="text-xs font-semibold text-slate-700">ลองจิจูด
+          <input name={inputNames?.lng} type="number" step="any" value={value.lng} onChange={(event) => onChange({ ...value, lng: numeric(event.target.value, value.lng) })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500" />
         </label>
-        <label className="text-xs text-slate-400">รัศมี (ม.)
-          <input name={inputNames?.radiusM} type="number" min={1} step={1} value={value.radiusM} onChange={(event) => onChange({ ...value, radiusM: Math.max(1, Math.round(numeric(event.target.value, value.radiusM)) ) })} className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" />
+        <label className="text-xs font-semibold text-slate-700">รัศมี (ม.)
+          <input name={inputNames?.radiusM} type="number" min={1} step={1} value={value.radiusM} onChange={(event) => onChange({ ...value, radiusM: Math.max(1, Math.round(numeric(event.target.value, value.radiusM)) ) })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500" />
         </label>
       </div>
     </div>
