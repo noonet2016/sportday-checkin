@@ -34,7 +34,7 @@ function numeric(value: string, fallback: number) {
 
 export default function MapPickerInner({ value, onChange, inputNames }: MapPickerProps) {
   const position = useMemo<[number, number]>(() => [value.lat, value.lng], [value.lat, value.lng]);
-  const [basemap, setBasemap] = useState<"street" | "satellite">("street");
+  const [basemap, setBasemap] = useState<"street" | "satellite">("satellite");
   const [locating, setLocating] = useState(false);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Array<{ lat: string; lon: string; display_name: string }>>([]);
