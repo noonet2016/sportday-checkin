@@ -10,8 +10,8 @@ import ReportFilters from "./ReportFilters";
 import { allowedRooms, roomFilter } from "@/lib/staff-access";
 import { studentNameFilter } from "@/lib/student-search";
 export const dynamic = "force-dynamic";
-export default async function Report({ searchParams }: { searchParams: Promise<{ q?: string; room?: string; page?: string }> }) {
-  const session = await getSession("staff"); if (!session) redirect("/staff/login"); const rooms = await allowedRooms(session); const { q, room: roomParam, page: pageParam } = await searchParams; const picked = roomFilter(rooms, roomParam); const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
+export default async function Report({ searchParams }: { searchParams: Promise<{ q?: string; room?: string; page?: string; status?: string }> }) {
+  const session = await getSession("staff"); if (!session) redirect("/staff/login"); const rooms = await allowedRooms(session); const { q, room: roomParam, page: pageParam, status: statusParam } = await searchParams; const status = statusParam === "pass" || statusParam === "fail" ? statusParam : null; const picked = roomFilter(rooms, roomParam); const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
   const [students, days] = await Promise.all([
     prisma.student.findMany({ where: { house: "purple", ...scope, ...(picked ?? {}), ...studentNameFilter(q) }, select: { id: true, studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, number: true, program: true }, orderBy: [{ classLevel: "asc" }, { room: "asc" }, { number: "asc" }] }),
     prisma.eventDay.findMany({ include: { slots: { select: { id: true, period: true }, orderBy: { period: "asc" } } }, orderBy: { date: "asc" } })
@@ -28,10 +28,13 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
   const attendedOf = (studentId: number) => allSlots.filter(slot => map.has(`${studentId}:${slot.id}`)).length;
   const passedCount = students.filter(s => attendancePassed(attendedOf(s.id), allSlots.length)).length;
   // "ทุกห้อง" without a name search: one room per page (Trainer, 2026-10-24); a search or a picked room shows everything matched.
-  const paginate = !picked && !q && roomOptions.length > 1;
+  const paginate = !picked && !q && !status && roomOptions.length > 1;
   const pageIndex = Math.min(Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1), roomOptions.length) - 1;
   const pageRoom = paginate ? roomOptions[pageIndex] : null;
-  const shown = pageRoom ? students.filter(s => s.classLevel === pageRoom.classLevel && s.room === pageRoom.room) : students;
+  const shown = (pageRoom ? students.filter(s => s.classLevel === pageRoom.classLevel && s.room === pageRoom.room) : students)
+    .filter(s => !status || attendancePassed(attendedOf(s.id), allSlots.length) === (status === "pass"));
+  // Summary tiles filter the list by pass/fail; they keep the current room + search.
+  const statusHref = (next: "pass" | "fail" | null) => { const qs = new URLSearchParams({ ...(pickedKey ? { room: pickedKey } : {}), ...(q ? { q } : {}), ...(next ? { status: next } : {}) }).toString(); return `/staff/report${qs ? `?${qs}` : ""}`; };
   const shownPassed = shown.filter(s => attendancePassed(attendedOf(s.id), allSlots.length)).length;
   const pageHref = (i: number) => `/staff/report?page=${i + 1}`;
   const pager = pageRoom && (
@@ -59,13 +62,13 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
             <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-800">เกณฑ์ผ่าน: เข้าร่วมอย่างน้อย {Math.round(PASS_RATIO * 100)}% ({Math.ceil(PASS_RATIO * allSlots.length)}/{allSlots.length} ครั้ง)</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-xl bg-emerald-50 p-3 text-center"><div className="text-2xl font-bold tabular-nums text-emerald-700">{passedCount}</div><div className="text-sm font-medium text-emerald-900">ผ่าน</div></div>
-            <div className="rounded-xl bg-rose-50 p-3 text-center"><div className="text-2xl font-bold tabular-nums text-rose-700">{students.length - passedCount}</div><div className="text-sm font-medium text-rose-900">ไม่ผ่าน</div></div>
-            <div className="rounded-xl bg-slate-100 p-3 text-center"><div className="text-2xl font-bold tabular-nums text-slate-800">{students.length}</div><div className="text-sm font-medium text-slate-700">ทั้งหมด (คน)</div></div>
+            <a href={statusHref(status === "pass" ? null : "pass")} aria-current={status === "pass" ? "true" : undefined} className={`rounded-xl bg-emerald-50 p-3 text-center no-underline transition-shadow hover:ring-2 hover:ring-emerald-300 motion-reduce:transition-none ${status === "pass" ? "ring-2 ring-emerald-600" : ""}`}><div className="text-2xl font-bold tabular-nums text-emerald-700">{passedCount}</div><div className="text-sm font-medium text-emerald-900">ผ่าน</div></a>
+            <a href={statusHref(status === "fail" ? null : "fail")} aria-current={status === "fail" ? "true" : undefined} className={`rounded-xl bg-rose-50 p-3 text-center no-underline transition-shadow hover:ring-2 hover:ring-rose-300 motion-reduce:transition-none ${status === "fail" ? "ring-2 ring-rose-600" : ""}`}><div className="text-2xl font-bold tabular-nums text-rose-700">{students.length - passedCount}</div><div className="text-sm font-medium text-rose-900">ไม่ผ่าน</div></a>
+            <a href={statusHref(null)} aria-current={!status ? "true" : undefined} className={`rounded-xl bg-slate-100 p-3 text-center no-underline transition-shadow hover:ring-2 hover:ring-slate-300 motion-reduce:transition-none ${!status ? "ring-2 ring-slate-500" : ""}`}><div className="text-2xl font-bold tabular-nums text-slate-800">{students.length}</div><div className="text-sm font-medium text-slate-700">ทั้งหมด (คน)</div></a>
           </div>
           <div className="flex items-center gap-2"><div className="flex-1"><ProgressBar value={students.length ? passedCount * 100 / students.length : 0} tone="emerald" label="สัดส่วนผ่าน" /></div><span className="w-24 text-right text-xs font-semibold tabular-nums text-slate-600">ผ่าน {students.length ? Math.round(passedCount * 100 / students.length) : 0}%</span></div>
         </div>
-        <ReportFilters rooms={roomOptions.map(r => ({ key: `${r.classLevel}|${r.room}`, label: `${r.classLevel}/${r.room}${r.program ? ` (${r.program})` : ""}` }))} roomCount={roomOptions.length} pickedKey={pickedKey} q={q ?? ""} />
+        <ReportFilters rooms={roomOptions.map(r => ({ key: `${r.classLevel}|${r.room}`, label: `${r.classLevel}/${r.room}${r.program ? ` (${r.program})` : ""}` }))} roomCount={roomOptions.length} pickedKey={pickedKey} q={q ?? ""} status={status ?? ""} />
         {pager}
         {pageRoom && <div className="flex flex-wrap items-center gap-2 text-sm"><span className="font-semibold text-slate-700">ห้อง {pageRoom.classLevel}/{pageRoom.room}</span><span className="rounded-full bg-emerald-100 px-2.5 py-0.5 font-semibold text-emerald-800">ผ่าน {shownPassed}</span><span className="rounded-full bg-rose-100 px-2.5 py-0.5 font-semibold text-rose-800">ไม่ผ่าน {shown.length - shownPassed}</span><span className="rounded-full bg-slate-100 px-2.5 py-0.5 font-semibold text-slate-700">ทั้งหมด {shown.length} คน</span></div>}
         <div className="grid gap-2 md:hidden">
