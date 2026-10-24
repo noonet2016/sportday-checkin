@@ -24,3 +24,5 @@ next-env.d.ts
 /scratch/
 /data/
 graphify-out/
+/.screens-redesign/
+/.next-verify/
