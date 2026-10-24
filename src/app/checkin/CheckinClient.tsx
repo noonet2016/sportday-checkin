@@ -8,7 +8,7 @@ import ChoiceWithOther from "@/app/_components/ChoiceWithOther";
 import { formatDistance } from "@/lib/geo";
 import { CheckCircle2, Clock, Loader2, MapPin, Megaphone, Trophy, XCircle } from "lucide-react";
 
-type Props = { state: string; slotLabel: string | null; remainingMs?: number; existing?: { role: string; checkedInAt: string; distanceM: number | null }; radiusM: number | null };
+type Props = { state: string; slotLabel: string | null; todaySlots: string[]; remainingMs?: number; existing?: { role: string; checkedInAt: string; distanceM: number | null }; radiusM: number | null };
 
 /** Same wording as lineup: in/out of radius with the measured distance. */
 function GeoBadge({ distance, radius }: { distance: number; radius: number }) {
@@ -16,7 +16,7 @@ function GeoBadge({ distance, radius }: { distance: number; radius: number }) {
   return <p className={`inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-center text-sm font-semibold ${outside ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-800"}`}><MapPin aria-hidden="true" size={15} />{outside ? "เช็คจากนอกรัศมี" : "เช็คจากในรัศมี"} (~{formatDistance(distance)} · กำหนด {formatDistance(radius)})</p>;
 }
 const MIN_COLLECT_MS = 3000; const MAX_WAIT_MS = 15000; const MIN_SAMPLES = 3;
-export default function CheckinClient({ state, slotLabel, remainingMs, existing, radiusM }: Props) {
+export default function CheckinClient({ state, slotLabel, todaySlots, remainingMs, existing, radiusM }: Props) {
   const router = useRouter(); const [distance, setDistance] = useState<number | null>(null); const [checkedIn, setCheckedIn] = useState(false);
   const [role, setRole] = useState<"compete" | "cheer">("cheer"); const [sport, setSport] = useState(""); const [busy, setBusy] = useState(false); const [result, setResult] = useState<string | null>(null); const [countdown, setCountdown] = useState("");
   // closesAt is Bangkok wall-clock, not comparable with the phone's Date.now(); count down from the server-computed remainder.
@@ -39,7 +39,7 @@ export default function CheckinClient({ state, slotLabel, remainingMs, existing,
     <Clock aria-hidden="true" size={48} className="text-slate-400" />
     <h1 className="text-xl font-bold text-slate-900">{state === "not-event-day" ? "วันนี้ไม่มีกิจกรรมกีฬาสี" : state === "before" ? "ยังไม่ถึงเวลาเช็คชื่อ" : "หมดเวลาเช็คชื่อแล้ว"}</h1>
     <p className="text-sm text-slate-600">เช็คชื่อได้วันละ 2 รอบ ระหว่างวันที่ 26–30 ตุลาคม 2569</p>
-    <div className="flex flex-wrap justify-center gap-2 text-sm font-semibold"><span className="rounded-full bg-violet-100 px-3 py-1 text-violet-800">รอบเช้า 08:00–10:00</span><span className="rounded-full bg-violet-100 px-3 py-1 text-violet-800">รอบบ่าย 13:00–15:00</span></div>
+    {todaySlots.length > 0 && <div className="flex flex-wrap justify-center gap-2 text-sm font-semibold">{todaySlots.map(label => <span key={label} className="rounded-full bg-violet-100 px-3 py-1 text-violet-800">{label}</span>)}</div>}
   </section>;
   const ok = result !== null && checkedIn;
   return <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

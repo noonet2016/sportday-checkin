@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { resolveSlotWindow } from "@/lib/event";
+import { slotWindowNow } from "@/lib/slots";
 import { scoreSuspicion, type CheckinGpsSample } from "@/lib/spoof";
 import { writeAudit } from "@/lib/audit";
 import { distanceFromCentre, getGeofence } from "@/lib/geofence";
@@ -24,12 +24,11 @@ export async function performCheckin(input: { studentId: number; now: CheckinNow
   const role = input.role as CheckinRole;
   const sport = input.sport?.trim() ?? "";
   if (SPORT_REQUIRED && role === "compete" && !sport) return { ok: false, message: SPORT_REQUIRED_MESSAGE };
-  const window = resolveSlotWindow(input.now.wallClock);
+  const { window, slotId } = await slotWindowNow(input.now);
   if (window.state !== "open") return { ok: false, message: window.state === "not-event-day" ? NOT_EVENT_DAY_MESSAGE : "ยังไม่ถึงเวลาเช็คชื่อหรือหมดเวลาแล้ว" };
   const student = await prisma.student.findUnique({ where: { id: input.studentId }, select: { id: true, house: true, lineUserId: true } });
   if (!student?.lineUserId || student.house !== "purple") return { ok: false, message: "ต้องใช้บัญชีนักเรียนสีม่วง" };
-  const eventDay = await prisma.eventDay.findUnique({ where: { date: input.now.dateOnly }, select: { id: true } });
-  const slot = eventDay ? await prisma.checkinSlot.findUnique({ where: { eventDayId_period: { eventDayId: eventDay.id, period: window.period } }, select: { id: true } }) : null;
+  const slot = slotId ? { id: slotId } : null;
   if (!slot) return { ok: false, message: "ยังไม่ได้ตั้งค่ารอบเช็คชื่อวันนี้ กรุณาติดต่อเจ้าหน้าที่" };
   const fence = await getGeofence();
   if (!fence) return { ok: false, message: "ยังไม่ได้ตั้งค่าพื้นที่โรงเรียน กรุณาติดต่อเจ้าหน้าที่" };

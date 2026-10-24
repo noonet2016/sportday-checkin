@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { attendancePassed, attendancePercent, EVENT_DATES, resolveSlotWindow } from "../src/lib/event";
+import { attendancePassed, attendancePercent, EVENT_DATES, resolveSlotWindow, windowFromSlots } from "../src/lib/event";
 import { formatDistance, haversineDistance } from "../src/lib/geo";
 import { scoreSuspicion, type CheckinGpsSample } from "../src/lib/spoof";
 
@@ -8,7 +8,8 @@ const at = (iso: string) => new Date(iso);
 
 test("resolves slot boundaries using Bangkok wall-clock dates", () => {
   assert.equal(resolveSlotWindow(at("2026-10-26T08:00:00Z"), EVENT_DATES).state, "open");
-  assert.equal(resolveSlotWindow(at("2026-10-26T10:00:00Z"), EVENT_DATES).state, "closed");
+  // Between rounds = "before" the afternoon round (not "closed"), so students at 11:00 are told it has not opened yet.
+  assert.equal(resolveSlotWindow(at("2026-10-26T10:00:00Z"), EVENT_DATES).state, "before");
   assert.equal(resolveSlotWindow(at("2026-10-26T13:00:00Z"), EVENT_DATES).state, "open");
   assert.equal(resolveSlotWindow(at("2026-10-26T14:30:00Z"), EVENT_DATES).state, "open");
   assert.equal(resolveSlotWindow(at("2026-10-26T15:00:00Z"), EVENT_DATES).state, "closed");
@@ -107,4 +108,14 @@ test("compareStudents orders by room numerically, then เลขที่", asyn
     { classLevel: "1", room: "4", number: 2, studentCode: "c" },
   ].sort(compareStudents);
   assert.deepEqual(rows.map(r => `${r.room}:${r.number}`), ["4:2", "4:10", "15:1"]);
+});
+
+test("windowFromSlots follows edited DB times, not the default schedule", () => {
+  const d = (hm: string) => new Date(`2026-10-28T${hm}:00Z`);
+  const slots = [{ period: "morning" as const, opensAt: d("08:30"), closesAt: d("10:30") }, { period: "afternoon" as const, opensAt: d("13:00"), closesAt: d("15:30") }];
+  assert.equal(windowFromSlots(d("08:15"), slots).state, "before");
+  assert.equal(windowFromSlots(d("10:15"), slots).state, "open");
+  assert.equal(windowFromSlots(d("15:15"), slots).state, "open");
+  assert.equal(windowFromSlots(d("15:30"), slots).state, "closed");
+  assert.equal(windowFromSlots(d("09:00"), []).state, "not-event-day");
 });

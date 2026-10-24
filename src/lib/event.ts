@@ -20,29 +20,37 @@ export const attendancePassed = (attended: number, totalSlots: number): boolean 
 export const periodOrder = (period: string): number => period === "morning" ? 0 : 1;
 export type SlotState = { state: "not-event-day" } | { state: "before" | "open" | "closed"; period: EventPeriod; opensAt: Date; closesAt: Date };
 
+/** Default windows (hours) — used by the seed and as a pure fallback. Live windows come from the DB slots, editable by admin. */
 const schedule: Record<EventPeriod, readonly [number, number]> = { morning: [8, 10], afternoon: [13, 15] };
+export type SlotTimes = { period: EventPeriod; opensAt: Date; closesAt: Date };
 export function eventDateKey(wallClock: Date): string { return wallClock.toISOString().slice(0, 10); }
-export function resolveSlotWindow(wallClock: Date, eventDates: readonly string[] = EVENT_DATES): SlotState {
-  const date = eventDateKey(wallClock);
-  if (!eventDates.includes(date)) return { state: "not-event-day" };
+function defaultSlotsFor(wallClock: Date): SlotTimes[] {
+  return (Object.entries(schedule) as [EventPeriod, readonly [number, number]][]).map(([period, [openHour, closeHour]]) => ({ period, opensAt: new Date(Date.UTC(wallClock.getUTCFullYear(), wallClock.getUTCMonth(), wallClock.getUTCDate(), openHour)), closesAt: new Date(Date.UTC(wallClock.getUTCFullYear(), wallClock.getUTCMonth(), wallClock.getUTCDate(), closeHour)) }));
+}
+/** Window state for one day's slots (Bangkok wall-clock): open now, the next slot ("before", incl. the gap between rounds), or "closed" after the last. No slots = not an event day. */
+export function windowFromSlots(wallClock: Date, daySlots: readonly SlotTimes[]): SlotState {
+  if (!daySlots.length) return { state: "not-event-day" };
+  const slots = [...daySlots].sort((a, b) => a.opensAt.getTime() - b.opensAt.getTime());
   const now = wallClock.getTime();
-  const slots = (Object.entries(schedule) as [EventPeriod, readonly [number, number]][]).map(([period, [openHour, closeHour]]) => ({ period, opensAt: new Date(Date.UTC(wallClock.getUTCFullYear(), wallClock.getUTCMonth(), wallClock.getUTCDate(), openHour)), closesAt: new Date(Date.UTC(wallClock.getUTCFullYear(), wallClock.getUTCMonth(), wallClock.getUTCDate(), closeHour)) }));
   const current = slots.find((slot) => now >= slot.opensAt.getTime() && now < slot.closesAt.getTime());
   if (current) return { state: "open", ...current };
-  if (now < slots[0].opensAt.getTime()) return { state: "before", ...slots[0] };
+  const next = slots.find((slot) => now < slot.opensAt.getTime());
+  if (next) return { state: "before", ...next };
   return { state: "closed", ...slots[slots.length - 1] };
 }
+export function resolveSlotWindow(wallClock: Date, eventDates: readonly string[] = EVENT_DATES): SlotState {
+  return eventDates.includes(eventDateKey(wallClock)) ? windowFromSlots(wallClock, defaultSlotsFor(wallClock)) : { state: "not-event-day" };
+}
 
-/** Choose the current open event slot, otherwise the next slot, clamping before/after the event. */
-export function resolveDefaultSlot(wallClock: Date, eventDates: readonly string[] = EVENT_DATES): { date: string; period: EventPeriod } {
-  const slots = [...eventDates].sort().flatMap(date => EVENT_PERIODS.map(period => {
-    const [open, close] = schedule[period];
-    return { date, period, opensAt: Date.UTC(Number(date.slice(0,4)), Number(date.slice(5,7))-1, Number(date.slice(8,10)), open), closesAt: Date.UTC(Number(date.slice(0,4)), Number(date.slice(5,7))-1, Number(date.slice(8,10)), close) };
-  }));
+/** Choose the current open slot, otherwise the next slot, clamping before/after the event. `slots` = all event slots (DB); defaults to the fixed schedule. */
+export function resolveDefaultSlot(wallClock: Date, eventDates: readonly string[] = EVENT_DATES, slots?: readonly (SlotTimes & { date: string })[]): { date: string; period: EventPeriod } {
+  const all = (slots ?? [...eventDates].flatMap(date => defaultSlotsFor(new Date(`${date}T00:00:00Z`)).map(s => ({ ...s, date }))))
+    .map(s => ({ date: s.date, period: s.period, opensAt: s.opensAt.getTime(), closesAt: s.closesAt.getTime() }))
+    .sort((a, b) => a.opensAt - b.opensAt);
   const now = wallClock.getTime();
-  const selected = slots.find(slot => now >= slot.opensAt && now < slot.closesAt)
-    ?? slots.find(slot => slot.opensAt > now)
-    ?? slots[slots.length - 1];
+  const selected = all.find(slot => now >= slot.opensAt && now < slot.closesAt)
+    ?? all.find(slot => slot.opensAt > now)
+    ?? all[all.length - 1];
   return { date: selected.date, period: selected.period };
 }
 

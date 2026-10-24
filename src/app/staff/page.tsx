@@ -8,6 +8,7 @@ import SlotBar from "./ui/SlotBar";
 import Refresh from "./Refresh";
 import ProgramFilters from "./ProgramFilters";
 import SheetTrigger from "./ui/SheetTrigger";
+import { allEventSlots } from "@/lib/slots";
 import { EVENT_DATES, resolveDefaultSlot, compareRooms, periodLabel, roleLabel } from "@/lib/event";
 import { allowedRooms } from "@/lib/staff-access";
 
@@ -18,7 +19,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
   const pendingReviews = session?.role === "admin" ? await prisma.checkinRecord.findMany({ where: { reviewRequested: true }, select: { id: true, reviewReason: true, student: { select: { classLevel: true, room: true, number: true, prefix: true, firstName: true, lastName: true } }, slot: { select: { period: true, eventDay: { select: { date: true } } } } }, orderBy: { reviewRequestedAt: "asc" } }) : []; if (!session) redirect("/staff/login");
   const rooms = await allowedRooms(session);
   const params = await searchParams; const now = nowInBangkok();
-  const defaultSlot = resolveDefaultSlot(now.wallClock, EVENT_DATES);
+  const defaultSlot = resolveDefaultSlot(now.wallClock, EVENT_DATES, await allEventSlots());
   const day = parseDateInput(params.day ?? "") ?? parseDateInput(defaultSlot.date)!;
   const period = params.period === "morning" || params.period === "afternoon" ? params.period : defaultSlot.period;
   const event = await prisma.eventDay.findUnique({ where: { date: day }, select: { id: true } });
