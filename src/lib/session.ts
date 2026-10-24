@@ -49,12 +49,12 @@ export async function getSession(expected?: "student" | "staff"): Promise<Sessio
 
 export async function requireSession(): Promise<NonNullable<Session>> {
   const session = await getSession();
-  if (!session) throw new Error("Authentication required");
+  if (!session) throw new Error("กรุณาเข้าสู่ระบบ");
   return session;
 }
 
 export async function requireStaff(admin = false) {
   const session = await getSession("staff");
-  if (!session || (admin && session.role !== "admin")) throw new Error("Staff authorization required");
+  if (!session || (admin && session.role !== "admin")) throw new Error("ต้องใช้สิทธิ์เจ้าหน้าที่");
   return session;
 }

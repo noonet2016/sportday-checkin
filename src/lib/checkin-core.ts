@@ -12,6 +12,7 @@ type Result = { ok: boolean; message: string };
 type CheckinNow = { dateOnly: Date; wallClock: Date };
 export const CHECKIN_ALREADY_DONE_MESSAGE = "คุณเช็คอินช่วงนี้ไปแล้ว";
 export const NOT_EVENT_DAY_MESSAGE = "วันนี้ไม่มีกิจกรรมกีฬาสี";
+export const STAFF_STUDENT_ALREADY_CHECKED_IN_MESSAGE = "นักเรียนเช็คชื่อในรอบนี้ไปแล้ว ไม่สามารถบันทึกแทนได้";
 
 export async function performCheckin(input: { studentId: number; now: CheckinNow; role: string; sport?: string; lat: number; lng: number; accuracy: number; samples: CheckinGpsSample[]; ip: string | null }): Promise<Result> {
   if (!Number.isFinite(input.lat) || input.lat < -90 || input.lat > 90 || !Number.isFinite(input.lng) || input.lng < -180 || input.lng > 180 || !Number.isFinite(input.accuracy) || input.accuracy > 100) return { ok: false, message: "ระบุตำแหน่ง GPS ไม่ได้หรือไม่แม่นยำพอ กรุณาลองใหม่ในที่โล่ง" };
@@ -43,30 +44,30 @@ export async function performCheckin(input: { studentId: number; now: CheckinNow
 
 export async function staffRecordCheckin(input: { staffId: number; studentId: number; slotId: number; role: string; sport?: string; reason: string; now: Date; allowedRooms?: RoomKey[]; isAdmin?: boolean }): Promise<Result> {
   const reason = input.reason.trim();
-  if (!Number.isSafeInteger(input.studentId) || !Number.isSafeInteger(input.slotId) || !["compete", "cheer"].includes(input.role) || reason.length < 3 || reason.length > 500) return { ok: false, message: "A valid role and reason (3–500 characters) are required." };
+  if (!Number.isSafeInteger(input.studentId) || !Number.isSafeInteger(input.slotId) || !["compete", "cheer"].includes(input.role) || reason.length < 3 || reason.length > 500) return { ok: false, message: "กรุณาเลือกบทบาทและระบุเหตุผล (3–500 ตัวอักษร)" };
   try {
     await prisma.$transaction(async tx => {
       const student = await tx.student.findFirst({ where: { id: input.studentId, house: "purple", ...(input.isAdmin ? {} : { OR: (input.allowedRooms ?? []).map(({ classLevel, room }) => ({ classLevel, room })) }) }, select: { id: true } });
       const slot = await tx.checkinSlot.findUnique({ where: { id: input.slotId }, select: { id: true } });
-      if (!student || !slot) throw new Error("Student or slot not found");
-      if (await tx.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: input.studentId, slotId: input.slotId } }, select: { id: true } })) throw new Error("Student already checked in for this slot; staff on-behalf check-in was not created.");
+      if (!student || !slot) throw new Error("ไม่พบข้อมูลนักเรียนหรือรอบเช็คชื่อ");
+      if (await tx.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: input.studentId, slotId: input.slotId } }, select: { id: true } })) throw new Error(STAFF_STUDENT_ALREADY_CHECKED_IN_MESSAGE);
       const record = await tx.checkinRecord.create({ data: { studentId: input.studentId, slotId: input.slotId, role: input.role, sport: input.role === "compete" && input.sport?.trim() ? input.sport.trim().slice(0, 100) : null, lat: 0, lng: 0, accuracy: 0, source: "staff", staffId: input.staffId, note: reason, checkedInAt: input.now } });
       await writeAudit(tx, `staff:${input.staffId}`, "staff_checkin_created", "CheckinRecord", String(record.id), { studentId: input.studentId, slotId: input.slotId, role: input.role, reason });
     });
-    return { ok: true, message: "Staff check-in recorded." };
-  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "Could not record staff check-in." }; }
+    return { ok: true, message: "บันทึกการเช็คชื่อแทนเรียบร้อย" };
+  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "บันทึกการเช็คชื่อแทนไม่สำเร็จ" }; }
 }
 
 export async function clearCheckinFlag(input: { staffId: number; role: string; recordId: number }): Promise<void> {
-  if (input.role !== "admin") throw new Error("Staff authorization required");
-  if (!Number.isSafeInteger(input.recordId)) throw new Error("Invalid record");
-  await prisma.$transaction(async tx => { const record = await tx.checkinRecord.findUnique({ where: { id: input.recordId }, select: { id: true } }); if (!record) throw new Error("Record not found");
+  if (input.role !== "admin") throw new Error("ต้องใช้สิทธิ์ผู้ดูแลระบบ");
+  if (!Number.isSafeInteger(input.recordId)) throw new Error("ข้อมูลรายการไม่ถูกต้อง");
+  await prisma.$transaction(async tx => { const record = await tx.checkinRecord.findUnique({ where: { id: input.recordId }, select: { id: true } }); if (!record) throw new Error("ไม่พบรายการเช็คชื่อ");
     await tx.checkinRecord.update({ where: { id: input.recordId }, data: { isSuspicious: false, suspicionReasons: null } }); await writeAudit(tx, `staff:${input.staffId}`, "checkin_flag_cleared", "CheckinRecord", String(input.recordId)); });
 }
 
 export async function deleteCheckinRecord(input: { staffId: number; role: string; recordId: number }): Promise<void> {
-  if (input.role !== "admin") throw new Error("Staff authorization required");
-  if (!Number.isSafeInteger(input.recordId)) throw new Error("Invalid record");
-  await prisma.$transaction(async tx => { const record = await tx.checkinRecord.findUnique({ where: { id: input.recordId }, select: { id: true, studentId: true, slotId: true } }); if (!record) throw new Error("Record not found");
+  if (input.role !== "admin") throw new Error("ต้องใช้สิทธิ์ผู้ดูแลระบบ");
+  if (!Number.isSafeInteger(input.recordId)) throw new Error("ข้อมูลรายการไม่ถูกต้อง");
+  await prisma.$transaction(async tx => { const record = await tx.checkinRecord.findUnique({ where: { id: input.recordId }, select: { id: true, studentId: true, slotId: true } }); if (!record) throw new Error("ไม่พบรายการเช็คชื่อ");
     await writeAudit(tx, `admin:${input.staffId}`, "checkin_deleted", "CheckinRecord", String(input.recordId), { studentId: record.studentId, slotId: record.slotId }); await tx.checkinRecord.delete({ where: { id: input.recordId } }); });
 }

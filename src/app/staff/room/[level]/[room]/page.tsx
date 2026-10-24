@@ -1,11 +1,141 @@
-import { periodLabel } from "@/lib/event";
+import { periodLabel, roleLabel } from "@/lib/event";
 import Link from "next/link";
 import StaffNav from "../../../StaffNav";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { parseDateInput,formatWallClockTime } from "@/lib/time";
-import { manualRecord,clearFlag,deleteRecord } from "@/app/staff/actions";
+import { parseDateInput, formatWallClockTime } from "@/lib/time";
+import { manualRecord, clearFlag, deleteRecord } from "@/app/staff/actions";
 import { allowedRooms, roomAllowed } from "@/lib/staff-access";
-export const dynamic="force-dynamic";
-export default async function Room({params,searchParams}:{params:Promise<{level:string;room:string}>;searchParams:Promise<{day?:string;period?:string}>}){const session=await getSession("staff");if(!session)redirect("/staff/login");const [{level:rawLevel,room:rawRoom},{day,period}]=await Promise.all([params,searchParams]);const level=decodeURIComponent(rawLevel),room=decodeURIComponent(rawRoom);const rooms=await allowedRooms(session);if(!roomAllowed(rooms,level,room)) notFound();const date=parseDateInput(day??"");const selectedDate=date??new Date(0);const slot=date?await prisma.checkinSlot.findFirst({where:{eventDay:{date:selectedDate},period:period==="afternoon"?"afternoon":"morning"}}):null;const students=await prisma.student.findMany({where:{house:"purple",classLevel:level,room},select:{id:true,studentCode:true,prefix:true,firstName:true,lastName:true,classLevel:true,room:true,program:true}});const records=slot?await prisma.checkinRecord.findMany({where:{slotId:slot.id,studentId:{in:students.map(s=>s.id)}},include:{staff:{select:{displayName:true}}}}):[];const map=new Map(records.map(r=>[r.studentId,r]));const pick=await prisma.checkinSlot.findMany({where:{eventDay:{date:selectedDate}},select:{id:true,period:true}});return <main className="screen" style={{maxWidth:"76rem",alignContent:"start"}}><StaffNav active="home"/><section className="card"><h1>{level}/{room} · {students.length} คน</h1><Link href={`/staff${day ? `?day=${encodeURIComponent(day)}&period=${period === "afternoon" ? "afternoon" : "morning"}` : ""}`}>← กลับ</Link><div className="overflow-x-auto"><table className="w-full text-left"><thead><tr><th>นักเรียน</th><th>สถานะ / บทบาท</th><th>เวลา</th><th>เหตุผลธง</th><th>แผนที่</th><th>บันทึกแทน</th></tr></thead><tbody>{students.map(s=>{const r=map.get(s.id);return <tr key={s.id}><td>{s.studentCode} {s.prefix}{s.firstName} {s.lastName}</td><td>{r?`${r.role} ${r.source==="staff"?"(เจ้าหน้าที่)":""}`:"ยังไม่เช็ก"} {r?.isSuspicious&&"⚠️"}</td><td>{r?formatWallClockTime(r.checkedInAt,true):"—"}</td><td>{r?.suspicionReasons??"—"}</td><td>{r&&<a target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${r.lat},${r.lng}`}>เปิดแผนที่</a>}</td><td>{!r&&pick.map(x=><form action={manualRecord} key={x.id} className="grid gap-1"><input type="hidden" name="studentId" value={s.id}/><input type="hidden" name="slotId" value={x.id}/><span>{periodLabel(x.period)}</span><select name="role"><option value="compete">แข่งขัน</option><option value="cheer">เชียร์</option></select><input name="sport" placeholder="กีฬา (ถ้าแข่ง)"/><input name="reason" required minLength={3} placeholder="เหตุผลที่บันทึกแทน"/><button className="secondary">บันทึก</button></form>)}{r?.isSuspicious&&session.role==="admin"&&<form action={clearFlag}><input type="hidden" name="recordId" value={r.id}/><button className="secondary">ล้างธง</button></form>}{r&&session.role==="admin"&&<form action={deleteRecord}><input type="hidden" name="recordId" value={r.id}/><button className="secondary">ลบรายการ</button></form>}</td></tr>})}</tbody></table></div></section></main>}
+
+export const dynamic = "force-dynamic";
+
+export default async function Room({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ level: string; room: string }>;
+  searchParams: Promise<{ day?: string; period?: string }>;
+}) {
+  const session = await getSession("staff");
+  if (!session) redirect("/staff/login");
+  const [{ level: rawLevel, room: rawRoom }, { day, period }] = await Promise.all([params, searchParams]);
+  const level = decodeURIComponent(rawLevel), room = decodeURIComponent(rawRoom);
+  const rooms = await allowedRooms(session);
+  if (!roomAllowed(rooms, level, room)) notFound();
+
+  const date = parseDateInput(day ?? "");
+  const selectedDate = date ?? new Date(0);
+  const slot = date ? await prisma.checkinSlot.findFirst({
+    where: { eventDay: { date: selectedDate }, period: period === "afternoon" ? "afternoon" : "morning" },
+  }) : null;
+
+  const students = await prisma.student.findMany({
+    where: { house: "purple", classLevel: level, room },
+    select: { id: true, studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, program: true, number: true },
+    orderBy: [{ number: "asc" }, { studentCode: "asc" }],
+  });
+
+  const records = slot ? await prisma.checkinRecord.findMany({
+    where: { slotId: slot.id, studentId: { in: students.map(s => s.id) } },
+    include: { staff: { select: { displayName: true } } },
+  }) : [];
+
+  const map = new Map(records.map(r => [r.studentId, r]));
+  const pick = await prisma.checkinSlot.findMany({
+    where: { eventDay: { date: selectedDate } },
+    select: { id: true, period: true },
+  });
+
+  return (
+    <main className="screen" style={{ maxWidth: "76rem", alignContent: "start" }}>
+      <StaffNav active="home" />
+      <section className="card">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1>{level}/{room} · {students.length} คน</h1>
+          <Link href={`/staff${day ? `?day=${encodeURIComponent(day)}&period=${period === "afternoon" ? "afternoon" : "morning"}` : ""}`}>
+            ← กลับ
+          </Link>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr>
+                <th>นักเรียน</th>
+                <th>สถานะ / บทบาท</th>
+                <th>เวลา</th>
+                <th>เหตุผลธง</th>
+                <th>แผนที่</th>
+                <th>บันทึกแทน</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((s) => {
+                const r = map.get(s.id);
+                return (
+                  <tr key={s.id}>
+                    <td className="break-words font-medium text-slate-900">
+                      {s.studentCode} {s.prefix ?? ""}{s.firstName} {s.lastName}
+                    </td>
+                    <td>
+                      {r ? (
+                        <span>
+                          {roleLabel(r.role)}
+                          {r.sport ? ` (${r.sport})` : ""}
+                          {r.source === "staff" ? " (เจ้าหน้าที่)" : ""}
+                          {r.isSuspicious && " ⚠️"}
+                        </span>
+                      ) : (
+                        "ยังไม่เช็ก"
+                      )}
+                    </td>
+                    <td>{r ? formatWallClockTime(r.checkedInAt, true) : "—"}</td>
+                    <td className="break-words max-w-xs">{r?.suspicionReasons ?? "—"}</td>
+                    <td>
+                      {r && (r.lat !== 0 || r.lng !== 0) ? (
+                        <a target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${r.lat},${r.lng}`}>
+                          เปิดแผนที่
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>
+                      {!r && pick.map((x) => (
+                        <form action={manualRecord} key={x.id} className="grid gap-1 mb-2">
+                          <input type="hidden" name="studentId" value={s.id} />
+                          <input type="hidden" name="slotId" value={x.id} />
+                          <span className="text-xs font-semibold">{periodLabel(x.period)}</span>
+                          <select name="role">
+                            <option value="compete">🏃 แข่งกีฬา</option>
+                            <option value="cheer">📣 เชียร์</option>
+                          </select>
+                          <input name="sport" placeholder="กีฬา (ถ้าแข่ง)" />
+                          <input name="reason" required minLength={3} placeholder="เหตุผลที่บันทึกแทน" />
+                          <button className="secondary">บันทึก</button>
+                        </form>
+                      ))}
+                      {r?.isSuspicious && session.role === "admin" && (
+                        <form action={clearFlag} className="mb-1">
+                          <input type="hidden" name="recordId" value={r.id} />
+                          <button className="secondary">ล้างธง</button>
+                        </form>
+                      )}
+                      {r && session.role === "admin" && (
+                        <form action={deleteRecord}>
+                          <input type="hidden" name="recordId" value={r.id} />
+                          <button className="secondary">ลบรายการ</button>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  );
+}

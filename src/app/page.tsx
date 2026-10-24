@@ -1,9 +1,17 @@
+import Link from "next/link";
+
 export default function HomePage() {
   return (
-    <main className="mx-auto max-w-xl p-8">
-      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-700">Purple House</p>
-      <h1 className="mt-2 text-3xl font-bold">Sport Day Check-in</h1>
-      <p className="mt-4 text-slate-700">Student check-in is coming in M2. Staff tools are coming in M3.</p>
+    <main className="screen">
+      <section className="card">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-700">คณะสีม่วง</p>
+        <h1 className="text-3xl font-bold">ระบบเช็คชื่อกิจกรรมกีฬาสี</h1>
+        <p className="text-slate-700">ระบบเช็คชื่อนักเรียนและเครื่องมือสำหรับครู/เจ้าหน้าที่</p>
+        <div className="mt-4 flex flex-col gap-3">
+          <Link href="/checkin" className="link-button">เช็คชื่อนักเรียน</Link>
+          <Link href="/staff" className="link-button" style={{ background: "#4c1d95" }}>สำหรับครู / เจ้าหน้าที่</Link>
+        </div>
+      </section>
     </main>
   );
 }

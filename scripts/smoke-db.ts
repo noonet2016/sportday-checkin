@@ -1,5 +1,5 @@
 import { prisma } from "../src/lib/prisma";
-import { performCheckin, staffRecordCheckin, clearCheckinFlag, deleteCheckinRecord, CHECKIN_ALREADY_DONE_MESSAGE, NOT_EVENT_DAY_MESSAGE } from "../src/lib/checkin-core";
+import { performCheckin, staffRecordCheckin, clearCheckinFlag, deleteCheckinRecord, CHECKIN_ALREADY_DONE_MESSAGE, NOT_EVENT_DAY_MESSAGE, STAFF_STUDENT_ALREADY_CHECKED_IN_MESSAGE } from "../src/lib/checkin-core";
 import type { CheckinGpsSample } from "../src/lib/spoof";
 import { nowInBangkok } from "../src/lib/time";
 import { allowedRooms, roomAllowed } from "../src/lib/staff-access";
@@ -94,7 +94,7 @@ async function main() {
     const outOfScope = await staffRecordCheckin({ staffId: staff.id, studentId: outsideStudent.id, slotId: afternoon.id, role: "cheer", reason: "out of scope test", now: at(8, 30).wallClock, allowedRooms: staffScope });
     await check("staff on-behalf record for out-of-scope student rejects", async () => !outOfScope.ok && !await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: outsideStudent.id, slotId: afternoon.id } } }));
     const selfAlready = await staffRecordCheckin({ staffId: admin.id, isAdmin: true, allowedRooms: adminScope, studentId: student.id, slotId: morning.id, role: "cheer", reason: "student already self checked in", now: at(8, 30).wallClock });
-    await check("staff on-behalf after self-check rejects explicitly without creating a row", async () => !selfAlready.ok && selfAlready.message.includes("already checked in") && await prisma.checkinRecord.count({ where: { studentId: student.id, slotId: morning.id } }) === 1);
+    await check("staff on-behalf after self-check rejects explicitly without creating a row", async () => !selfAlready.ok && selfAlready.message === STAFF_STUDENT_ALREADY_CHECKED_IN_MESSAGE && await prisma.checkinRecord.count({ where: { studentId: student.id, slotId: morning.id } }) === 1);
 
     stage = "admin clear-flag and delete cores";
     const clearTarget = suspiciousRow;
