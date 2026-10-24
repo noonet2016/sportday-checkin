@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { formatThaiDateFull } from "@/lib/time";
 import StaffNav from "../StaffNav";
 import ProgressBar from "../ui/ProgressBar";
+import { Download, Search } from "lucide-react";
 import { allowedRooms, roomFilter } from "@/lib/staff-access";
 import { studentNameFilter } from "@/lib/student-search";
 export const dynamic = "force-dynamic";
@@ -35,9 +36,9 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
   const pager = pageRoom && (
     <nav aria-label="เลือกห้อง" className="grid gap-2">
       <div className="flex items-center justify-between gap-2">
-        {pageIndex > 0 ? <a className="secondary whitespace-nowrap" href={pageHref(pageIndex - 1)}>‹ ก่อนหน้า</a> : <span />}
+        {pageIndex > 0 ? <a className="inline-flex h-11 items-center whitespace-nowrap rounded-xl border border-violet-300 bg-white px-4 font-semibold text-violet-800 no-underline hover:bg-violet-50" href={pageHref(pageIndex - 1)}>‹ ก่อนหน้า</a> : <span />}
         <b className="text-center">ห้อง {pageRoom.classLevel}/{pageRoom.room}{pageRoom.program ? ` (${pageRoom.program})` : ""} · หน้า {pageIndex + 1}/{roomOptions.length}</b>
-        {pageIndex < roomOptions.length - 1 ? <a className="secondary whitespace-nowrap" href={pageHref(pageIndex + 1)}>ถัดไป ›</a> : <span />}
+        {pageIndex < roomOptions.length - 1 ? <a className="inline-flex h-11 items-center whitespace-nowrap rounded-xl border border-violet-300 bg-white px-4 font-semibold text-violet-800 no-underline hover:bg-violet-50" href={pageHref(pageIndex + 1)}>ถัดไป ›</a> : <span />}
       </div>
       <div className="flex flex-wrap gap-1.5">
         {roomOptions.map((r, i) => (
@@ -50,25 +51,41 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
     <main className="screen" style={{ maxWidth: "90rem", alignContent: "start" }}>
       <StaffNav active="report" />
       <section className="grid gap-4">
-        <header className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-xl font-bold">รายงานการเช็กชื่อ</h1><a className="secondary min-h-11 border border-slate-300 bg-white text-slate-800 no-underline" href={`/staff/report.csv${csvQuery ? `?${csvQuery}` : ""}`}>ดาวน์โหลด CSV</a></header>
-        <p>เกณฑ์ผ่าน: เข้าร่วมอย่างน้อย {Math.round(PASS_RATIO * 100)}% ({Math.ceil(PASS_RATIO * allSlots.length)}/{allSlots.length} ครั้ง){paginate ? " · รวมทุกห้อง: " : " · "}ผ่าน <b className="text-emerald-700">{passedCount}</b> · ไม่ผ่าน <b className="text-red-700">{students.length - passedCount}</b> จาก {students.length} คน</p>
-        <form className="grid gap-3 md:flex md:flex-wrap md:items-end">
+        <header className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-xl font-bold">รายงานการเช็กชื่อ</h1><a className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-xl bg-emerald-700 px-4 font-semibold text-white no-underline hover:bg-emerald-800" href={`/staff/report.csv${csvQuery ? `?${csvQuery}` : ""}`}><Download aria-hidden="true" size={18} />ดาวน์โหลด CSV</a></header>
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-slate-700">{paginate ? "สรุปผลรวมทุกห้อง" : "สรุปผล"}</h2>
+            <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-800">เกณฑ์ผ่าน: เข้าร่วมอย่างน้อย {Math.round(PASS_RATIO * 100)}% ({Math.ceil(PASS_RATIO * allSlots.length)}/{allSlots.length} ครั้ง)</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl bg-emerald-50 p-3 text-center"><div className="text-2xl font-bold tabular-nums text-emerald-700">{passedCount}</div><div className="text-sm font-medium text-emerald-900">ผ่าน</div></div>
+            <div className="rounded-xl bg-rose-50 p-3 text-center"><div className="text-2xl font-bold tabular-nums text-rose-700">{students.length - passedCount}</div><div className="text-sm font-medium text-rose-900">ไม่ผ่าน</div></div>
+            <div className="rounded-xl bg-slate-100 p-3 text-center"><div className="text-2xl font-bold tabular-nums text-slate-800">{students.length}</div><div className="text-sm font-medium text-slate-700">ทั้งหมด (คน)</div></div>
+          </div>
+          <div className="flex items-center gap-2"><div className="flex-1"><ProgressBar value={students.length ? passedCount * 100 / students.length : 0} tone="emerald" label="สัดส่วนผ่าน" /></div><span className="w-24 text-right text-xs font-semibold tabular-nums text-slate-600">ผ่าน {students.length ? Math.round(passedCount * 100 / students.length) : 0}%</span></div>
+        </div>
+        <form className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4 md:grid-cols-[minmax(12rem,16rem)_1fr_auto] md:items-end">
           {roomOptions.length > 1 && (
-            <label>ห้อง
-              <select name="room" defaultValue={pickedKey} className="rounded-xl border-2 border-violet-300 bg-white p-3 text-base text-slate-900">
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-700">ห้อง
+              <select name="room" defaultValue={pickedKey} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base font-normal text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-200">
                 <option value="">ทุกห้อง ({roomOptions.length} ห้อง)</option>
                 {roomOptions.map(r => <option key={`${r.classLevel}|${r.room}`} value={`${r.classLevel}|${r.room}`}>{r.classLevel}/{r.room}{r.program ? ` (${r.program})` : ""}</option>)}
               </select>
             </label>
           )}
-          <label className="md:min-w-64">ค้นหานักเรียน<input name="q" type="search" defaultValue={q ?? ""} placeholder="ชื่อ นามสกุล หรือเลขประจำตัว" /></label>
-          <div className="flex flex-wrap gap-2">
-            <button className="primary whitespace-nowrap">แสดงผล</button>
-            {(q || pickedKey) && <a className="secondary whitespace-nowrap" href="/staff/report">ล้างตัวกรอง</a>}
+          <label className={`grid gap-1.5 text-sm font-semibold text-slate-700 ${roomOptions.length > 1 ? "" : "md:col-span-2"}`}>ค้นหานักเรียน
+            <span className="relative block">
+              <Search aria-hidden="true" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input name="q" type="search" defaultValue={q ?? ""} placeholder="ชื่อ นามสกุล หรือเลขประจำตัว" className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-base font-normal text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-200" />
+            </span>
+          </label>
+          <div className="flex gap-2">
+            <button className="h-11 flex-1 whitespace-nowrap rounded-xl bg-violet-700 px-5 font-semibold text-white hover:bg-violet-800 md:flex-none">แสดงผล</button>
+            {(q || pickedKey) && <a className="inline-flex h-11 items-center whitespace-nowrap rounded-xl bg-slate-700 px-4 font-semibold text-white no-underline hover:bg-slate-800" href="/staff/report">ล้างตัวกรอง</a>}
           </div>
         </form>
         {pager}
-        {pageRoom && <p>ห้องนี้: ผ่าน <b className="text-emerald-700">{shownPassed}</b> · ไม่ผ่าน <b className="text-red-700">{shown.length - shownPassed}</b> จาก {shown.length} คน</p>}
+        {pageRoom && <div className="flex flex-wrap items-center gap-2 text-sm"><span className="font-semibold text-slate-700">ห้อง {pageRoom.classLevel}/{pageRoom.room}</span><span className="rounded-full bg-emerald-100 px-2.5 py-0.5 font-semibold text-emerald-800">ผ่าน {shownPassed}</span><span className="rounded-full bg-rose-100 px-2.5 py-0.5 font-semibold text-rose-800">ไม่ผ่าน {shown.length - shownPassed}</span><span className="rounded-full bg-slate-100 px-2.5 py-0.5 font-semibold text-slate-700">ทั้งหมด {shown.length} คน</span></div>}
         <div className="grid gap-2 md:hidden">
           {shown.map(s => { const done = attendedOf(s.id); const passed = attendancePassed(done, allSlots.length); return <article key={s.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
             <div className="flex items-start justify-between gap-2"><div className="font-semibold">{s.studentCode} {s.prefix ?? ""}{s.firstName} {s.lastName}<div className="text-sm font-normal text-slate-600">{s.classLevel}/{s.room} · เลขที่ {s.number ?? "—"}</div></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${passed ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>{passed ? "ผ่าน" : "ไม่ผ่าน"}</span></div>
