@@ -10,33 +10,35 @@ const SPORT_REQUIRED = false;
 type CheckinRole = "compete" | "cheer";
 type Result = { ok: boolean; message: string };
 type CheckinNow = { dateOnly: Date; wallClock: Date };
+export const CHECKIN_ALREADY_DONE_MESSAGE = "คุณเช็คอินช่วงนี้ไปแล้ว";
+export const NOT_EVENT_DAY_MESSAGE = "วันนี้ไม่มีกิจกรรมกีฬาสี";
 
 export async function performCheckin(input: { studentId: number; now: CheckinNow; role: string; sport?: string; lat: number; lng: number; accuracy: number; samples: CheckinGpsSample[]; ip: string | null }): Promise<Result> {
-  if (!Number.isFinite(input.lat) || input.lat < -90 || input.lat > 90 || !Number.isFinite(input.lng) || input.lng < -180 || input.lng > 180 || !Number.isFinite(input.accuracy) || input.accuracy > 100) return { ok: false, message: "GPS location is unavailable or too inaccurate. Please try again outdoors." };
-  if (input.role !== "compete" && input.role !== "cheer") return { ok: false, message: "Choose compete or cheer." };
+  if (!Number.isFinite(input.lat) || input.lat < -90 || input.lat > 90 || !Number.isFinite(input.lng) || input.lng < -180 || input.lng > 180 || !Number.isFinite(input.accuracy) || input.accuracy > 100) return { ok: false, message: "ระบุตำแหน่ง GPS ไม่ได้หรือไม่แม่นยำพอ กรุณาลองใหม่ในที่โล่ง" };
+  if (input.role !== "compete" && input.role !== "cheer") return { ok: false, message: "กรุณาเลือกแข่งกีฬาหรือเชียร์" };
   const role = input.role as CheckinRole;
   const sport = input.sport?.trim() ?? "";
-  if (SPORT_REQUIRED && role === "compete" && !sport) return { ok: false, message: "Please enter your sport." };
+  if (SPORT_REQUIRED && role === "compete" && !sport) return { ok: false, message: "กรุณาระบุกีฬาที่แข่ง" };
   const window = resolveSlotWindow(input.now.wallClock);
-  if (window.state !== "open") return { ok: false, message: window.state === "not-event-day" ? "Today is not a Sport Day event day." : "This check-in window is not open." };
+  if (window.state !== "open") return { ok: false, message: window.state === "not-event-day" ? NOT_EVENT_DAY_MESSAGE : "ยังไม่ถึงเวลาเช็คชื่อหรือหมดเวลาแล้ว" };
   const student = await prisma.student.findUnique({ where: { id: input.studentId }, select: { id: true, house: true, lineUserId: true } });
-  if (!student?.lineUserId || student.house !== "purple") return { ok: false, message: "Purple House student account required." };
+  if (!student?.lineUserId || student.house !== "purple") return { ok: false, message: "ต้องใช้บัญชีนักเรียนสีม่วง" };
   const eventDay = await prisma.eventDay.findUnique({ where: { date: input.now.dateOnly }, select: { id: true } });
   const slot = eventDay ? await prisma.checkinSlot.findUnique({ where: { eventDayId_period: { eventDayId: eventDay.id, period: window.period } }, select: { id: true } }) : null;
-  if (!slot) return { ok: false, message: "Today’s slot has not been configured yet. Please ask staff." };
+  if (!slot) return { ok: false, message: "ยังไม่ได้ตั้งค่ารอบเช็คชื่อวันนี้ กรุณาติดต่อเจ้าหน้าที่" };
   const settings = await prisma.systemSetting.findMany({ where: { key: { in: ["geofence_lat", "geofence_lng", "geofence_radius_m"] } } });
   const value = (key: string) => Number(settings.find((setting) => setting.key === key)?.value);
   const lat = value("geofence_lat"), lng = value("geofence_lng"), radius = value("geofence_radius_m");
-  if (![lat, lng, radius].every(Number.isFinite) || radius <= 0) return { ok: false, message: "Campus geofence is not configured yet. Please ask staff." };
-  if (haversineDistance(input.lat, input.lng, lat, lng) > radius) return { ok: false, message: "You are outside the campus check-in area. Please move inside the school boundary and try again." };
+  if (![lat, lng, radius].every(Number.isFinite) || radius <= 0) return { ok: false, message: "ยังไม่ได้ตั้งค่าพื้นที่โรงเรียน กรุณาติดต่อเจ้าหน้าที่" };
+  if (haversineDistance(input.lat, input.lng, lat, lng) > radius) return { ok: false, message: "คุณอยู่นอกพื้นที่โรงเรียน กรุณาเข้ามาในบริเวณโรงเรียนแล้วลองใหม่" };
   const suspicion = scoreSuspicion(input.samples, input.lat, input.lng, { name: "campus", lat, lng });
   try {
     await prisma.$transaction(async (tx) => {
       const record = await tx.checkinRecord.create({ data: { studentId: student.id, slotId: slot.id, role, sport: role === "compete" && sport ? sport.slice(0, 100) : null, lat: input.lat, lng: input.lng, accuracy: input.accuracy, samples: input.samples, ipAddress: input.ip, isSuspicious: suspicion.suspicious, suspicionReasons: suspicion.reasons.join("; ") || null } });
       await writeAudit(tx, `student:${student.id}`, "checkin_created", "CheckinRecord", String(record.id), { slotId: slot.id, role, suspicious: suspicion.suspicious });
     });
-    return { ok: true, message: "Check-in complete. Have a great Sport Day!" };
-  } catch (error) { if ((error as { code?: string }).code === "P2002") return { ok: true, message: "You have already checked in for this slot." }; return { ok: false, message: "Could not save your check-in. Please try again." }; }
+    return { ok: true, message: "เช็คชื่อเรียบร้อย ขอให้สนุกกับกิจกรรมกีฬาสีนะ" };
+  } catch (error) { if ((error as { code?: string }).code === "P2002") return { ok: true, message: CHECKIN_ALREADY_DONE_MESSAGE }; return { ok: false, message: "บันทึกการเช็คชื่อไม่สำเร็จ กรุณาลองใหม่" }; }
 }
 
 export async function staffRecordCheckin(input: { staffId: number; studentId: number; slotId: number; role: string; sport?: string; reason: string; now: Date; allowedRooms?: RoomKey[]; isAdmin?: boolean }): Promise<Result> {

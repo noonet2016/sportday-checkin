@@ -2,6 +2,8 @@ export const EVENT_DATES = ["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-2
 export const EVENT_PERIODS = ["morning", "afternoon"] as const;
 export type EventPeriod = (typeof EVENT_PERIODS)[number];
 export const periodLabel = (period: string): string => period === "morning" ? "เช้า" : "บ่าย";
+export const roleLabel = (role: string): string => role === "compete" ? "🏃 แข่งกีฬา" : "📣 เชียร์";
+export const roleCsvLabel = (role: string): string => role === "compete" ? "แข่งกีฬา" : "เชียร์";
 export type SlotState = { state: "not-event-day" } | { state: "before" | "open" | "closed"; period: EventPeriod; opensAt: Date; closesAt: Date };
 
 const schedule: Record<EventPeriod, readonly [number, number]> = { morning: [8, 10], afternoon: [13, 14] };

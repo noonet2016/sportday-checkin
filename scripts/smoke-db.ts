@@ -1,5 +1,5 @@
 import { prisma } from "../src/lib/prisma";
-import { performCheckin, staffRecordCheckin, clearCheckinFlag, deleteCheckinRecord } from "../src/lib/checkin-core";
+import { performCheckin, staffRecordCheckin, clearCheckinFlag, deleteCheckinRecord, CHECKIN_ALREADY_DONE_MESSAGE, NOT_EVENT_DAY_MESSAGE } from "../src/lib/checkin-core";
 import type { CheckinGpsSample } from "../src/lib/spoof";
 import { nowInBangkok } from "../src/lib/time";
 import { allowedRooms, roomAllowed } from "../src/lib/staff-access";
@@ -62,7 +62,7 @@ async function main() {
     const openResult = await performCheckin({ studentId: student.id, now: at(8, 30), role: "compete", sport: "track", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: "127.0.0.1" });
     await check("open-window accepts and persists one row plus audit", async () => openResult.ok && Boolean(await prisma.checkinRecord.findUnique({ where: { studentId_slotId: { studentId: student.id, slotId: morning.id } } })) && Boolean(await prisma.auditLog.findFirst({ where: { actor: `student:${student.id}`, action: "checkin_created" } })));
     const duplicate = await performCheckin({ studentId: student.id, now: at(8, 30), role: "compete", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
-    await check("second call returns friendly already-checked-in result and row count stays 1", async () => duplicate.ok && duplicate.message.includes("already checked in") && await prisma.checkinRecord.count({ where: { studentId: student.id, slotId: morning.id } }) === 1);
+    await check("second call returns friendly already-checked-in result and row count stays 1", async () => duplicate.ok && duplicate.message === CHECKIN_ALREADY_DONE_MESSAGE && await prisma.checkinRecord.count({ where: { studentId: student.id, slotId: morning.id } }) === 1);
 
     stage = "geofence and suspicious GPS";
     const rejectedGeo = await performCheckin({ studentId: geoStudent.id, now: at(8, 31), role: "cheer", lat: 0, lng: 0, accuracy: 20, samples, ip: null });
@@ -80,7 +80,7 @@ async function main() {
     const afternoonClose = await performCheckin({ studentId: student.id, now: at(14, 0), role: "cheer", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
     await check("after-window boundaries 10:00:00 and 14:00:00 reject", async () => !morningClose.ok && !afternoonClose.ok);
     const nonEvent = await performCheckin({ studentId: student.id, now: { dateOnly: new Date(Date.UTC(2026, 9, 31)), wallClock: new Date(Date.UTC(2026, 9, 31, 8, 30)) }, role: "cheer", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
-    await check("non-event day rejects", async () => !nonEvent.ok && nonEvent.message.includes("not a Sport Day event day"));
+    await check("non-event day rejects", async () => !nonEvent.ok && nonEvent.message === NOT_EVENT_DAY_MESSAGE);
     const unboundResult = await performCheckin({ studentId: unbound.id, now: at(8, 30), role: "cheer", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
     const nonpurpleResult = await performCheckin({ studentId: nonpurple.id, now: at(8, 30), role: "cheer", lat: center.lat, lng: center.lng, accuracy: 20, samples, ip: null });
     await check("unbound and non-purple student accounts reject", async () => !unboundResult.ok && !nonpurpleResult.ok);
