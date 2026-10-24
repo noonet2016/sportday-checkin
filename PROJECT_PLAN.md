@@ -30,7 +30,7 @@ LINE LIFF check-in app for the school sports week (กีฬาสี): **purple
 ## Dependencies / blockers
 - **Open questions (Trainer gathering answers, 2026-10-23):**
   - ~~Q2 roster~~ ✅ answered 2026-10-23: 14 Excel files (one per room) in `data/roster/` → combined `data/roster/purple-students.csv` = **503 students**, 14 rooms. Excel is the source of truth (Trainer). Room 1/15 & 3/15 = EP (English Program), 2/14 & 5/13 = SMTE (special science). Excel header row mislabels col2/col3 (`prefix`,`idstudent` swapped — data is id then prefix).
-  - Q4 if "compete", record the sport name?
+  - ~~Q4~~ ✅ 2026-10-24: sport REQUIRED for compete — picker of international sports + "อื่น ๆ" free text; on-behalf reason picker + "อื่น ๆ".
   - ~~Q5~~ ✅ 2026-10-24: each teacher sees ONLY assigned rooms (StaffRoom m2m); admin sees all + manages staff/rooms.
   - ~~Q6~~ ✅ 2026-10-24: pass/fail — attend ≥80% of slots (8/10) → ผ่าน; shown on report + CSV.
 - LINE: reuse the `tnw-lineup` provider so existing lineup userIds match (needs a new LIFF app/endpoint on that channel — Trainer action in LINE Developers Console).
