@@ -29,7 +29,7 @@ LINE LIFF check-in app for the school sports week (กีฬาสี): **purple
 
 ## Dependencies / blockers
 - **Open questions (Trainer gathering answers, 2026-10-23):**
-  - Q2 purple roster source / size / already in lineup DB? (document from school)
+  - ~~Q2 roster~~ ✅ answered 2026-10-23: 14 Excel files (one per room) in `data/roster/` → combined `data/roster/purple-students.csv` = **503 students**, 14 rooms. Excel is the source of truth (Trainer). Room 1/15 & 3/15 = EP (English Program), 2/14 & 5/13 = SMTE (special science). Excel header row mislabels col2/col3 (`prefix`,`idstudent` swapped — data is id then prefix).
   - Q4 if "compete", record the sport name?
   - Q5 who can access the dashboard (how many purple-house staff)?
   - Q6 what the result is used for (activity hours? pass/fail?) — shapes the report.
@@ -44,5 +44,6 @@ LINE LIFF check-in app for the school sports week (กีฬาสี): **purple
 - 2026-10-23: Student data → subscription teammates only (never Meetang/AiPASS). Builder = Tokai Teio.
 
 ## Notes
+- 2026-10-23: `scripts/import-roster.ts` expects `house` col; combined CSV has `program` instead (house = purple for all). Add `program` (nullable: EP/SMTE) to Student in M2.
 - Times are Bangkok wall-clock — reuse lineup's `time.ts` helpers; never `new Date()` + toLocaleString double-shift ([[lineup-nextjs-bangkok-wallclock-tz]]).
 - Plesk/Passenger gotchas: [[reference-nextjs-plesk-deploy-proven]].
