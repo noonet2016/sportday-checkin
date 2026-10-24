@@ -38,3 +38,4 @@
 - 15:17 Symboli Rudolf (Claude): Report mobile layout: filter buttons in a wrapping row (no mid-word breaks); table min-width 72rem + nowrap names → horizontal scroll inside the card instead of squashing (page overflow 0).
 - 15:19 Symboli Rudolf (Claude): เลขที่ moved to first column in report page and CSV (room page table already had it first). Verified page headers/rows and CSV.
 - 15:21 Symboli Rudolf (Claude): Dates displayed Thai-style via formatThaiDate() in src/lib/time.ts ('จ. 26 ต.ค.' / 'จ. 26 ต.ค. 2569' BE): report column headers + daily summary, CSV headers, room page slot line + picker, settings slot list. URLs/form values keep ISO. Unit test 13/13; verified all pages + CSV.
+- 15:25 Symboli Rudolf (Claude): Room page back to strict เลขที่ order (removed unchecked-first sort — Trainer found it confusing); hint line now 'กดบันทึกแทนได้ที่แถวของนักเรียนคนนั้น'. Verified desktop + mobile 1..38 in order.

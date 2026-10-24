@@ -56,8 +56,7 @@ export default async function Room({
     const d = distanceFromCentre(fence, r.lat, r.lng);
     return `${d > fence.radius ? "⚠️ นอกรัศมี" : "ในรัศมี"} ~${formatDistance(d)} (กำหนด ${formatDistance(fence.radius)})`;
   };
-  // Not-yet-checked students first so the on-behalf forms are at the top; Array.sort is stable, so number order is kept within each group.
-  students.sort((x, y) => Number(map.has(x.id)) - Number(map.has(y.id)));
+  // Strict เลขที่ order (Trainer, 2026-10-24) — the query already orders by number.
   const missingCount = students.filter(s => !map.has(s.id)).length;
   // On-behalf targets only the slot being viewed; the status shown on this page is for that slot.
   // Slot picker: every event slot, so teachers can review in the evening and back-date; future slots are view-only.
@@ -104,7 +103,7 @@ export default async function Room({
         </div>
         {slot && !viewedStarted && <p className="notice">รอบนี้ยังไม่ถึงเวลา — ดูรายชื่อได้ แต่บันทึกแทนได้หลังเปิดรอบแล้วเท่านั้น</p>}
         {slot && viewedIsPast && <p className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900">🕘 รอบนี้ผ่านไปแล้ว — บันทึกแทนที่นี่จะเป็นการ<b>บันทึกย้อนหลัง</b></p>}
-        {slot && <p className="text-sm text-slate-700">{formatThaiDate(slot.opensAt, { year: true })} รอบ{periodLabel(slot.period)} · ยังไม่เช็ค <b className="text-red-700">{missingCount}</b> คน{missingCount > 0 ? " — แสดงไว้ด้านบนพร้อมฟอร์มบันทึกแทน" : ""}</p>}
+        {slot && <p className="text-sm text-slate-700">{formatThaiDate(slot.opensAt, { year: true })} รอบ{periodLabel(slot.period)} · ยังไม่เช็ค <b className="text-red-700">{missingCount}</b> คน{missingCount > 0 ? " — กดบันทึกแทนได้ที่แถวของนักเรียนคนนั้น" : ""}</p>}
 
         {/* Mobile (<640px): one card per student */}
         <div className="space-y-3 sm:hidden">
