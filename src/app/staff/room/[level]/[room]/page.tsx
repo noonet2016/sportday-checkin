@@ -90,7 +90,7 @@ export default async function Room({
                       <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${r.isSuspicious ? "bg-amber-100 text-amber-900" : "bg-violet-100 text-violet-900"}`}>
                         {roleLabel(r.role)}
                         {r.sport ? ` (${r.sport})` : ""}
-                        {r.source === "staff" ? " (เจ้าหน้าที่)" : ""}
+                        {r.source === "staff" ? " · ✍️ ครูบันทึกแทน" : ""}
                         {r.isSuspicious && " ⚠️"}
                       </span>
                     ) : (
@@ -190,7 +190,7 @@ export default async function Room({
                         <span>
                           {roleLabel(r.role)}
                           {r.sport ? ` (${r.sport})` : ""}
-                          {r.source === "staff" ? " (เจ้าหน้าที่)" : ""}
+                          {r.source === "staff" ? " · ✍️ ครูบันทึกแทน" : ""}
                           {r.isSuspicious && " ⚠️"}
                         </span>
                       ) : (
