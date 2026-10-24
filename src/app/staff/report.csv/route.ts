@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   const students = await prisma.student.findMany({
     where: { house: "purple", ...scope, ...studentNameFilter(search) },
-    select: { studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, program: true, id: true },
+    select: { studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, number: true, program: true, id: true },
     orderBy: [{ classLevel: "asc" }, { room: "asc" }, { number: "asc" }]
   });
   const days = await prisma.eventDay.findMany({
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
   const q = (x: unknown) => `"${String(x ?? "").replaceAll('"', '""')}"`;
   const rows: string[][] = [
-    ["รหัส", "ชื่อ", "ระดับ", "ห้อง", "โครงการ", ...days.flatMap(d => d.slots.map(s => `${formatDateInput(d.date)} ${periodLabel(s.period)}`)), "รวม", "ร้อยละ", "สถานะ"]
+    ["รหัส", "ชื่อ", "ระดับ", "ห้อง", "เลขที่", "โครงการ", ...days.flatMap(d => d.slots.map(s => `${formatDateInput(d.date)} ${periodLabel(s.period)}`)), "รวม", "ร้อยละ", "สถานะ"]
   ];
   for (const s of students) {
     const slots = days.flatMap(d => d.slots);
@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
       `${s.prefix ?? ""}${s.firstName} ${s.lastName}`,
       s.classLevel,
       s.room,
+      s.number == null ? "" : String(s.number),
       s.program ?? "",
       ...vals,
       `${count}/${slots.length}`,

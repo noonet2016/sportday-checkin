@@ -71,6 +71,7 @@ export default async function Room({
               <article key={s.id} className="rounded-xl border border-violet-100 bg-white p-4 shadow-sm flex flex-col gap-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="font-bold text-slate-900 break-words">
+                    <span className="mr-2 inline-block rounded-md bg-slate-100 px-1.5 text-sm text-slate-700">เลขที่ {s.number ?? "—"}</span>
                     <span className="font-mono text-sm text-violet-700 mr-2">{s.studentCode}</span>
                     {s.prefix ?? ""}{s.firstName} {s.lastName}
                   </div>
@@ -158,6 +159,7 @@ export default async function Room({
           <table className="w-full text-left">
             <thead>
               <tr>
+                <th>เลขที่</th>
                 <th>นักเรียน</th>
                 <th>สถานะ / บทบาท</th>
                 <th>เวลา</th>
@@ -171,6 +173,7 @@ export default async function Room({
                 const r = map.get(s.id);
                 return (
                   <tr key={s.id}>
+                    <td>{s.number ?? "—"}</td>
                     <td className="break-words font-medium text-slate-900">
                       {s.studentCode} {s.prefix ?? ""}{s.firstName} {s.lastName}
                     </td>

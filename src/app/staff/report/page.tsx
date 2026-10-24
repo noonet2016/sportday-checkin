@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function Report({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const session = await getSession("staff"); if (!session) redirect("/staff/login"); const rooms = await allowedRooms(session); const { q } = await searchParams; const scope = session.role === "admin" ? {} : { OR: rooms.map(r => ({ classLevel: r.classLevel, room: r.room })) };
   const [students, days] = await Promise.all([
-    prisma.student.findMany({ where: { house: "purple", ...scope, ...studentNameFilter(q) }, select: { id: true, studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, program: true }, orderBy: [{ classLevel: "asc" }, { room: "asc" }, { number: "asc" }] }),
+    prisma.student.findMany({ where: { house: "purple", ...scope, ...studentNameFilter(q) }, select: { id: true, studentCode: true, prefix: true, firstName: true, lastName: true, classLevel: true, room: true, number: true, program: true }, orderBy: [{ classLevel: "asc" }, { room: "asc" }, { number: "asc" }] }),
     prisma.eventDay.findMany({ include: { slots: { select: { id: true, period: true }, orderBy: { period: "asc" } } }, orderBy: { date: "asc" } })
   ]);
   const ids = students.map(s => s.id);
@@ -39,6 +39,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
               <tr>
                 <th>นักเรียน</th>
                 <th>ห้อง</th>
+                <th>เลขที่</th>
                 {days.flatMap(d => d.slots.map(s => <th key={s.id}>{formatDateInput(d.date)} {periodLabel(s.period)}</th>))}
                 <th>รวม</th>
                 <th>ร้อยละ</th>
@@ -53,6 +54,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
                   <tr key={s.id}>
                     <td>{s.studentCode} {s.prefix ?? ""}{s.firstName} {s.lastName}</td>
                     <td>{s.classLevel}/{s.room} {s.program}</td>
+                    <td>{s.number ?? "—"}</td>
                     {days.flatMap(d => d.slots.map(slot => {
                       const r = map.get(`${s.id}:${slot.id}`);
                       return <td key={slot.id}>{r ? roleLabel(r.role) : "—"}</td>;
