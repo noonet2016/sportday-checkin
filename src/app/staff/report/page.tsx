@@ -77,7 +77,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
         </div>
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[72rem] border-collapse text-left text-sm">
-            <thead className="bg-slate-50 text-slate-800 [&_th]:border [&_th]:border-slate-300 [&_th]:px-2 [&_th]:py-1.5">
+            <thead className="bg-slate-50 text-slate-800 [&_th]:border [&_th]:border-slate-300 [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-center [&_th]:align-middle">
               <tr>
                 <th rowSpan={2}>เลขที่</th>
                 <th rowSpan={2}>นักเรียน</th>
