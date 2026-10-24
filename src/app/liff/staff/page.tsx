@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { AlertCircle, Link2, Loader2, ShieldCheck } from "lucide-react";
 import StudentShell from "@/app/_components/StudentShell";
+import PasswordInput from "@/app/_components/PasswordInput";
 
 type Result = { ok: boolean; redirect?: string; error?: string; displayName?: string };
 
@@ -33,7 +34,7 @@ export default function StaffLiffPage() {
       {phase === "bind" && <form onSubmit={bind} className="grid gap-4">
         <div className="grid gap-1"><h1 className="flex items-center gap-2 text-xl font-bold text-slate-900"><ShieldCheck aria-hidden="true" size={22} className="text-violet-700" />เข้าสู่ระบบครู</h1><p className="text-sm text-slate-600">ครั้งแรก: ใส่ชื่อผู้ใช้และรหัสผ่านครูหนึ่งครั้ง เพื่อผูกกับ LINE{lineName ? ` “${lineName}”` : ""} ครั้งต่อไปเปิดจาก LINE แล้วเข้าได้ทันที</p></div>
         <label className="grid gap-1.5 text-sm font-semibold text-slate-700">ชื่อผู้ใช้<input value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" placeholder="เช่น teacher214" required className={field} /></label>
-        <label className="grid gap-1.5 text-sm font-semibold text-slate-700">รหัสผ่าน<input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" required className={field} /></label>
+        <label className="grid gap-1.5 text-sm font-semibold text-slate-700">รหัสผ่าน<PasswordInput value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" required /></label>
         <button disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-violet-700 px-4 font-bold text-white hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-50"><Link2 aria-hidden="true" size={18} />{busy ? "กำลังผูกบัญชี…" : "เข้าสู่ระบบและผูก LINE"}</button>
         {error && <p role="alert" className="flex items-start gap-2 rounded-xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800"><AlertCircle aria-hidden="true" size={18} className="mt-0.5 shrink-0" />{error}</p>}
       </form>}
