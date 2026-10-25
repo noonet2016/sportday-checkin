@@ -10,7 +10,8 @@
     "lint": "eslint",
     "test": "tsx --test tests/*.test.ts",
     "db:push": "node scripts/db-push.js",
-    "diag": "node -e \"console.log('cwd:', process.cwd()); console.log(require('fs').readdirSync('.').join('\\n'))\""
+    "diag": "node -e \"console.log('cwd:', process.cwd()); console.log(require('fs').readdirSync('.').join('\\n'))\"",
+    "db:check": "node scripts/db-check.js"
   },
   "dependencies": {
     "@line/liff": "^2.29.1",
